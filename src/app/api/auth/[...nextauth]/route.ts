@@ -1,10 +1,15 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '@/config/db';
 import bcrypt from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -58,6 +63,25 @@ export const authOptions: NextAuthOptions = {
         }
 
         // 2. LOGIN FLOW
+        // Check if the user is an admin first
+        const admin = await prisma.admin.findUnique({
+          where: { email },
+        });
+
+        if (admin) {
+          const passwordMatch = await bcrypt.compare(rawPassword, admin.passwordHash);
+          if (!passwordMatch) {
+            throw new Error('Invalid email or password.');
+          }
+          return {
+            id: `admin_${admin.id}`,
+            name: 'Admin',
+            email: admin.email,
+            role: admin.role,
+          };
+        }
+
+        // Check if the user is a standard user
         const user = await prisma.user.findUnique({
           where: { email },
         });
@@ -84,6 +108,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.fullName,
           email: user.email,
+          role: 'User',
         };
       },
     }),
@@ -96,12 +121,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.image = user.image;
+        token.role = (user as any).role || 'User';
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         (session.user as any).id = token.id as string;
+        (session.user as any).image = token.image as string;
+        (session.user as any).role = token.role as string;
       }
       return session;
     },

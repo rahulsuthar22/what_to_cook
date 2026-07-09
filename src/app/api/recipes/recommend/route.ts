@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Execute the advanced scoring algorithm via Prisma raw SQL query
     const result = await prisma.$queryRaw<any[]>`
       SELECT 
-        r.recipe_id, 
+        r.id AS recipe_id, 
         r.recipe_name, 
         r.category, 
         r.cooking_time, 
@@ -35,13 +35,13 @@ export async function POST(request: NextRequest) {
               'quantity', ri.quantity,
               'matched', LOWER(i.ingredient_name) = ANY(${lowercaseIngredients})
             )
-          ) FILTER (WHERE i.ingredient_id IS NOT NULL), 
+          ) FILTER (WHERE i.id IS NOT NULL), 
           '[]'
         ) AS ingredients_details
       FROM recipes r
-      LEFT JOIN recipe_ingredients ri ON r.recipe_id = ri.recipe_id
-      LEFT JOIN ingredients i ON ri.ingredient_id = i.ingredient_id
-      GROUP BY r.recipe_id
+      LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+      LEFT JOIN ingredients i ON ri.ingredient_id = i.id
+      GROUP BY r.id
       HAVING SUM(CASE WHEN LOWER(i.ingredient_name) = ANY(${lowercaseIngredients}) THEN 1 ELSE 0 END) > 0
       ORDER BY 
         matched_ingredients_count DESC, 

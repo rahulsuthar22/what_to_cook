@@ -4,7 +4,7 @@ import { prisma } from '@/config/db';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, full_name, email, mobile_number, dietary_preference } = body;
+    const { user_id, full_name, email, mobile_number, dietary_preference, avatar_url } = body;
 
     if (!user_id || !full_name || !email) {
       return NextResponse.json(
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
         email: email,
         mobileNumber: mobile_number || undefined,
         dietaryPreference: dietary_preference || undefined,
+        avatarUrl: avatar_url || undefined,
       },
       create: {
         id: user_id,
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
         email: email,
         mobileNumber: mobile_number || '',
         dietaryPreference: dietary_preference || 'None',
+        avatarUrl: avatar_url || null,
       },
     });
 

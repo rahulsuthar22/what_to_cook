@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
 
     // 2. Fetch popular recipes (top 5 in meal plans)
     const popularRecipes = await prisma.$queryRaw<any[]>`
-      SELECT r.recipe_id, r.recipe_name, r.category, COUNT(mp.meal_plan_id)::int as plan_count
+      SELECT r.id AS recipe_id, r.recipe_name, r.category, COUNT(mp.id)::int as plan_count
       FROM meal_plans mp
-      JOIN recipes r ON mp.recipe_id = r.recipe_id
-      GROUP BY r.recipe_id, r.recipe_name, r.category
+      JOIN recipes r ON mp.recipe_id = r.id
+      GROUP BY r.id, r.recipe_name, r.category
       ORDER BY plan_count DESC
       LIMIT 5;
     `;
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     const popularIngredients = await prisma.$queryRaw<any[]>`
       SELECT i.ingredient_name, i.category, COUNT(ri.recipe_id)::int as recipe_count
       FROM recipe_ingredients ri
-      JOIN ingredients i ON ri.ingredient_id = i.ingredient_id
-      GROUP BY i.ingredient_id, i.ingredient_name, i.category
+      JOIN ingredients i ON ri.ingredient_id = i.id
+      GROUP BY i.id, i.ingredient_name, i.category
       ORDER BY recipe_count DESC
       LIMIT 5;
     `;

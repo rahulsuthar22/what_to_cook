@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import { 
   ChefHat, 
   Calendar, 
@@ -10,7 +11,8 @@ import {
   UtensilsCrossed, 
   TrendingUp, 
   Plus,
-  Clock
+  Clock,
+  ShieldAlert
 } from 'lucide-react';
 
 interface MealPlan {
@@ -25,10 +27,14 @@ interface MealPlan {
 
 export default function DashboardPage() {
   const { user, updatePreference } = useAuth();
+  const { data: session } = useSession();
   const [todayMeals, setTodayMeals] = useState<MealPlan[]>([]);
   const [loadingMeals, setLoadingMeals] = useState(true);
   const [selectedPreference, setSelectedPreference] = useState(user?.dietary_preference || 'None');
   const [updateSuccess, setUpdateSuccess] = useState(false);
+
+  const isAdmin = (session?.user as any)?.role === 'Admin' || (session?.user as any)?.role === 'SuperAdmin';
+  const roleName = (session?.user as any)?.role || 'User';
 
   useEffect(() => {
     if (user) {
@@ -90,17 +96,30 @@ export default function DashboardPage() {
           <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600, letterSpacing: '0.05em' }}>
             {todayDateString}
           </span>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             Hello, {user?.displayName}!
+            {isAdmin && (
+              <span className="badge badge-primary" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
+                {roleName}
+              </span>
+            )}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
             Ready to cook something amazing today? Enter your ingredients or schedule your next meal plan.
           </p>
         </div>
-        <Link href="/recommendations" className="btn btn-primary">
-          <ChefHat size={18} />
-          <span>What to Cook?</span>
-        </Link>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          {isAdmin && (
+            <Link href="/admin" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ShieldAlert size={18} />
+              <span>Admin Portal</span>
+            </Link>
+          )}
+          <Link href="/recommendations" className="btn btn-primary">
+            <ChefHat size={18} />
+            <span>What to Cook?</span>
+          </Link>
+        </div>
       </div>
 
       {/* Grid Modules */}
@@ -146,6 +165,22 @@ export default function DashboardPage() {
             View grocery list &rarr;
           </Link>
         </div>
+
+        {/* Card 4: Admin Controls */}
+        {isAdmin && (
+          <div className="card card-primary-indicator" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderLeftColor: 'var(--primary)' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: 'rgba(255, 90, 54, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+              <ShieldAlert size={22} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem' }}>Admin Control Center</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', flexGrow: 1 }}>
+              Manage ingredients list, upload new recipes, and track usage trends & recent signups.
+            </p>
+            <Link href="/admin" style={{ color: 'var(--primary)', fontSize: '0.9rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              Open dashboard &rarr;
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Bottom Section */}

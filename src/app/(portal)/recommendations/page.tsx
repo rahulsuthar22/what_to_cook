@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { 
   ChefHat, 
@@ -12,7 +12,8 @@ import {
   Sparkles,
   Bookmark,
   CalendarPlus,
-  BookOpen
+  BookOpen,
+  Search
 } from 'lucide-react';
 
 interface IngredientDetail {
@@ -52,6 +53,31 @@ export default function RecommendationsPage() {
   const [plannerDate, setPlannerDate] = useState('');
   const [plannerType, setPlannerType] = useState('Lunch');
   const [plannerSuccess, setPlannerSuccess] = useState(false);
+
+  // States for all recipes browsing
+  const [allRecipes, setAllRecipes] = useState<any[]>([]);
+  const [fetchingRecipes, setFetchingRecipes] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  // Fetch all recipes on mount
+  useEffect(() => {
+    const fetchAllRecipes = async () => {
+      setFetchingRecipes(true);
+      try {
+        const res = await fetch('/api/recipes');
+        const data = await res.json();
+        if (data.success) {
+          setAllRecipes(data.recipes);
+        }
+      } catch (err) {
+        console.error('Error fetching all recipes:', err);
+      } finally {
+        setFetchingRecipes(false);
+      }
+    };
+    fetchAllRecipes();
+  }, []);
 
   const handleAddIngredient = (name: string) => {
     const cleanName = name.trim();
@@ -110,6 +136,49 @@ export default function RecommendationsPage() {
       console.error('Error adding to planner:', err);
     }
   };
+
+  // Convert standard recipe format to RecommendedRecipe structure on-the-fly
+  const getRecommendedFormat = (recipe: any): RecommendedRecipe => {
+    const ingredients_details = recipe.ingredients.map((ing: any) => {
+      const matched = selectedIngredients.map(i => i.toLowerCase()).includes(ing.name.toLowerCase());
+      return {
+        name: ing.name,
+        quantity: ing.quantity,
+        matched,
+      };
+    });
+
+    const total_ingredients_needed = ingredients_details.length;
+    const matched_ingredients_count = ingredients_details.filter((i: any) => i.matched).length;
+    const match_percentage = total_ingredients_needed > 0 
+      ? Math.round((matched_ingredients_count / total_ingredients_needed) * 100)
+      : 0;
+
+    return {
+      recipe_id: recipe.recipe_id,
+      recipe_name: recipe.recipe_name,
+      category: recipe.category,
+      cooking_time: recipe.cooking_time,
+      difficulty_level: recipe.difficulty_level,
+      image_url: recipe.image_url,
+      calories: recipe.calories,
+      instructions: recipe.instructions,
+      total_ingredients_needed,
+      matched_ingredients_count,
+      match_percentage,
+      ingredients_details,
+    };
+  };
+
+  // Filter explore recipes
+  const categories = ['All', ...Array.from(new Set(allRecipes.map(r => r.category)))];
+
+  const filteredRecipes = allRecipes.filter(r => {
+    const matchesSearch = r.recipe_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          r.ingredients.some((ing: any) => ing.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === 'All' || r.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -238,6 +307,19 @@ export default function RecommendationsPage() {
                 className="card card-primary-indicator" 
                 style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}
               >
+                {recipe.image_url && (
+                  <img 
+                    src={recipe.image_url} 
+                    alt={recipe.recipe_name} 
+                    style={{ 
+                      width: '100%', 
+                      height: '160px', 
+                      objectFit: 'cover', 
+                      borderRadius: '8px'
+                    }} 
+                    referrerPolicy="no-referrer"
+                  />
+                )}
                 {/* Match Percentage Ring */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -251,7 +333,7 @@ export default function RecommendationsPage() {
                     color: recipe.match_percentage === 100 ? 'var(--success)' : 'var(--secondary)',
                     borderRadius: '8px',
                     padding: '0.3rem 0.6rem',
-                    fontSize: '0.8rem',
+                    fontSize: '0.8.rem',
                     fontWeight: 700
                   }}>
                     {recipe.match_percentage}% Match
@@ -297,6 +379,145 @@ export default function RecommendationsPage() {
         </div>
       )}
 
+      {/* Explore All Recipes Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 style={{ fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <BookOpen size={20} style={{ color: 'var(--primary)' }} />
+            Explore All Recipes ({filteredRecipes.length})
+          </h2>
+          
+          {/* Search bar */}
+          <div style={{ position: 'relative', width: '300px', maxWidth: '100%' }}>
+            <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              className="form-control" 
+              placeholder="Search recipes or ingredients..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ paddingLeft: '2.8rem', paddingRight: '1rem', width: '100%', paddingTop: '0.65rem', paddingBottom: '0.65rem', fontSize: '0.85rem' }}
+            />
+          </div>
+        </div>
+
+        {/* Category Filter Pills */}
+        {categories.length > 1 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {categories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-surface-elevated)',
+                  color: selectedCategory === cat ? '#fff' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'var(--transition-fast)'
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {fetchingRecipes ? (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+            Loading recipes...
+          </div>
+        ) : filteredRecipes.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            {filteredRecipes.map(recipe => {
+              const formattedRecipe = getRecommendedFormat(recipe);
+              return (
+                <div 
+                  key={formattedRecipe.recipe_id} 
+                  className="card card-primary-indicator" 
+                  style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem' }}
+                >
+                  {formattedRecipe.image_url && (
+                    <img 
+                      src={formattedRecipe.image_url} 
+                      alt={formattedRecipe.recipe_name} 
+                      style={{ 
+                        width: '100%', 
+                        height: '160px', 
+                        objectFit: 'cover', 
+                        borderRadius: '8px'
+                      }} 
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span className="badge badge-secondary" style={{ alignSelf: 'start', marginBottom: '0.4rem', fontSize: '0.65rem' }}>
+                        {formattedRecipe.category}
+                      </span>
+                      <h3 style={{ fontSize: '1.2rem' }}>{formattedRecipe.recipe_name}</h3>
+                    </div>
+                    {formattedRecipe.match_percentage > 0 && (
+                      <div style={{ 
+                        backgroundColor: formattedRecipe.match_percentage === 100 ? 'rgba(6, 214, 160, 0.15)' : 'rgba(0, 180, 216, 0.12)',
+                        color: formattedRecipe.match_percentage === 100 ? 'var(--success)' : 'var(--secondary)',
+                        borderRadius: '8px',
+                        padding: '0.3rem 0.6rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700
+                      }}>
+                        {formattedRecipe.match_percentage}% Match
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Substats */}
+                  <div style={{ display: 'flex', gap: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Clock size={14} />
+                      <span>{formattedRecipe.cooking_time} mins</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Flame size={14} />
+                      <span>{formattedRecipe.calories} kcal</span>
+                    </div>
+                    <span className="badge badge-warning" style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem' }}>
+                      {formattedRecipe.difficulty_level}
+                    </span>
+                  </div>
+
+                  {/* Ingredients summary */}
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0' }}>
+                    <strong>Ingredients:</strong> {formattedRecipe.total_ingredients_needed} total
+                    {formattedRecipe.matched_ingredients_count > 0 && ` (${formattedRecipe.matched_ingredients_count} matched)`}
+                  </div>
+
+                  {/* Buttons */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.5rem', marginTop: 'auto' }}>
+                    <button 
+                      className="btn btn-secondary"
+                      onClick={() => setSelectedRecipe(formattedRecipe)}
+                    >
+                      <BookOpen size={16} />
+                      <span>View Recipe</span>
+                    </button>
+                    <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
+                      <Bookmark size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', border: '1px dashed var(--border-color)', borderRadius: 'var(--border-radius-lg)' }}>
+            No recipes match your search filters.
+          </div>
+        )}
+      </div>
+
       {/* Modal details */}
       {selectedRecipe && (
         <div style={{
@@ -322,6 +543,19 @@ export default function RecommendationsPage() {
             flexDirection: 'column',
             gap: '1.5rem'
           }}>
+            {selectedRecipe.image_url && (
+              <img 
+                src={selectedRecipe.image_url} 
+                alt={selectedRecipe.recipe_name} 
+                style={{ 
+                  width: '100%', 
+                  height: '240px', 
+                  objectFit: 'cover', 
+                  borderRadius: 'var(--border-radius-md)'
+                }} 
+                referrerPolicy="no-referrer"
+              />
+            )}
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
