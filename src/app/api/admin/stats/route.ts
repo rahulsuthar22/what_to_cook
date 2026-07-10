@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const totalRecipes = await prisma.recipe.count();
     const totalMealPlans = await prisma.mealPlan.count();
     const totalAdmins = await prisma.admin.count();
+    const totalGroceryItems = await prisma.groceryList.count();
 
     // 2. Fetch popular recipes (top 5 in meal plans)
     const popularRecipes = await prisma.$queryRaw<any[]>`
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
         totalRecipes,
         totalMealPlans,
         totalAdmins,
+        totalGroceryItems,
       },
       popularRecipes,
       popularIngredients,
@@ -68,3 +70,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

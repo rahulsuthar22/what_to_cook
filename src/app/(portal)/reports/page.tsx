@@ -5,20 +5,28 @@ import { useAuth } from '@/context/AuthContext';
 import { BarChart3, TrendingUp, Calendar, ShoppingCart, Activity, PieChart, Info } from 'lucide-react';
 
 interface IngredientStat {
-  name: string;
-  count: number;
+  ingredient_name: string;
+  category: string;
+  recipe_count: number;
 }
 
 interface RecipeStat {
-  name: string;
-  count: number;
+  recipe_id: number;
+  recipe_name: string;
+  category: string;
+  plan_count: number;
+}
+
+interface StatsSummary {
+  totalUsers: number;
+  totalRecipes: number;
+  totalMealPlans: number;
+  totalAdmins: number;
+  totalGroceryItems: number;
 }
 
 interface AnalyticsData {
-  usersCount: number;
-  recipesCount: number;
-  mealPlansCount: number;
-  groceryItemsCount: number;
+  summary: StatsSummary;
   popularRecipes: RecipeStat[];
   popularIngredients: IngredientStat[];
 }
@@ -55,10 +63,10 @@ export default function ReportsPage() {
   }
 
   // Fallback stats if API returns empty
-  const usersCount = data?.usersCount || 3;
-  const recipesCount = data?.recipesCount || 9;
-  const mealPlansCount = data?.mealPlansCount || 4;
-  const groceryItemsCount = data?.groceryItemsCount || 12;
+  const usersCount = data?.summary?.totalUsers ?? 3;
+  const recipesCount = data?.summary?.totalRecipes ?? 9;
+  const mealPlansCount = data?.summary?.totalMealPlans ?? 4;
+  const groceryItemsCount = data?.summary?.totalGroceryItems ?? 12;
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -169,12 +177,12 @@ export default function ReportsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {data?.popularIngredients && data.popularIngredients.length > 0 ? (
               data.popularIngredients.map((ing, idx) => {
-                const percentage = Math.min(100, Math.max(15, (ing.count / mealPlansCount) * 100));
+                const percentage = Math.min(100, Math.max(15, (ing.recipe_count / Math.max(1, recipesCount)) * 100));
                 return (
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
-                      <span style={{ fontWeight: 600 }}>{ing.name}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>{ing.count} times matched</span>
+                      <span style={{ fontWeight: 600 }}>{ing.ingredient_name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{ing.recipe_count} recipes</span>
                     </div>
                     {/* Progress Bar */}
                     <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
@@ -224,10 +232,10 @@ export default function ReportsPage() {
                     }}>
                       #{idx + 1}
                     </span>
-                    <span style={{ fontWeight: 600 }}>{recipe.name}</span>
+                    <span style={{ fontWeight: 600 }}>{recipe.recipe_name}</span>
                   </div>
                   <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
-                    {recipe.count} slots
+                    {recipe.plan_count} slots
                   </span>
                 </div>
               ))
@@ -260,3 +268,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

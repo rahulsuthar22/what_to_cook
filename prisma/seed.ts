@@ -44,6 +44,11 @@ const RECIPES = [
     instructions: '1. Heat butter in a pan.\n2. Add chopped ginger, garlic, and onions; sauté until golden brown.\n3. Add pureed tomatoes and cook until oil separates.\n4. Mix in salt, turmeric, chili powder, and garam masala.\n5. Pour in cream and stir well.\n6. Add paneer cubes, cover and simmer for 5 minutes.\n7. Serve hot garnished with fresh cream.',
     imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=600&auto=format&fit=crop&q=80',
     calories: 320,
+    protein: 12.5,
+    carbs: 8.0,
+    fat: 26.0,
+    fiber: 2.1,
+    vitamins: 'Vitamin A, Calcium, Vitamin D',
     ingredients: [
       { name: 'Paneer', quantity: '200g' },
       { name: 'Butter', quantity: '2 tbsp' },
@@ -66,6 +71,11 @@ const RECIPES = [
     instructions: '1. Boil rice and let it cool completely.\n2. Heat oil in a large wok.\n3. Add finely chopped garlic, onions, carrots, and peas; stir-fry on high heat.\n4. Toss in the cold cooked rice.\n5. Season with salt and black pepper.\n6. Mix well and stir-fry for 3-5 minutes.\n7. Serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&auto=format&fit=crop&q=80',
     calories: 250,
+    protein: 5.5,
+    carbs: 48.0,
+    fat: 4.5,
+    fiber: 3.2,
+    vitamins: 'Vitamin C, Vitamin B6, Iron',
     ingredients: [
       { name: 'Rice', quantity: '1 cup' },
       { name: 'Carrot', quantity: '1/2 cup' },
@@ -84,6 +94,11 @@ const RECIPES = [
     instructions: '1. Heat butter in a pan.\n2. Add crushed garlic and onions; sauté.\n3. Add chopped tomatoes and cook until soft.\n4. Puree the cooked mixture until smooth.\n5. Strain back into the pot, add milk/water to adjust consistency.\n6. Season with salt and simmer for 5 minutes.\n7. Serve hot with croutons.',
     imageUrl: 'https://images.unsplash.com/photo-1547592165-e1d17fed6005?w=600&auto=format&fit=crop&q=80',
     calories: 120,
+    protein: 2.5,
+    carbs: 14.0,
+    fat: 6.0,
+    fiber: 1.8,
+    vitamins: 'Vitamin C, Vitamin A, Potassium',
     ingredients: [
       { name: 'Tomato', quantity: '4 large' },
       { name: 'Butter', quantity: '1 tbsp' },
@@ -101,6 +116,11 @@ const RECIPES = [
     instructions: '1. Boil potatoes, peel and dice them.\n2. Heat cooking oil in a pan.\n3. Add cumin seeds (jeera) and let them splutter.\n4. Add ginger and green chilies.\n5. Toss in the diced potatoes, turmeric, chili powder, and salt.\n6. Sauté on medium heat for 5-7 minutes until potatoes turn crisp.\n7. Serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=600&auto=format&fit=crop&q=80',
     calories: 180,
+    protein: 3.0,
+    carbs: 32.0,
+    fat: 6.5,
+    fiber: 4.2,
+    vitamins: 'Vitamin C, Potassium, Vitamin B6',
     ingredients: [
       { name: 'Potato', quantity: '3 medium' },
       { name: 'Cumin Seeds', quantity: '1.5 tsp' },
@@ -119,6 +139,11 @@ const RECIPES = [
     instructions: '1. Wash spinach leaves thoroughly.\n2. Heat butter in a pan.\n3. Add plenty of minced garlic and sauté until fragrant.\n4. Toss in spinach leaves and sauté on high heat for 3-4 minutes until wilted.\n5. Season with salt and lemon juice.\n6. Serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&auto=format&fit=crop&q=80',
     calories: 90,
+    protein: 3.5,
+    carbs: 4.0,
+    fat: 7.0,
+    fiber: 2.8,
+    vitamins: 'Vitamin A, Vitamin K, Vitamin C, Iron, Calcium',
     ingredients: [
       { name: 'Spinach', quantity: '1 bunch' },
       { name: 'Garlic', quantity: '2 tbsp' },
@@ -135,6 +160,11 @@ const RECIPES = [
     instructions: '1. Crumble the paneer.\n2. Heat butter in a pan and sauté chopped onions, ginger, and green chilies.\n3. Add tomatoes and cook until soft.\n4. Add turmeric, chili powder, garam masala, and salt.\n5. Toss in crumbled paneer and mix well.\n6. Cook for 3-4 minutes on low heat. Serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80',
     calories: 260,
+    protein: 14.0,
+    carbs: 5.0,
+    fat: 20.0,
+    fiber: 1.5,
+    vitamins: 'Calcium, Vitamin D, Vitamin A',
     ingredients: [
       { name: 'Paneer', quantity: '150g' },
       { name: 'Butter', quantity: '1.5 tbsp' },
@@ -154,6 +184,11 @@ const RECIPES = [
     instructions: '1. Whisk eggs in a bowl with a pinch of salt.\n2. Heat butter in a pan; add chopped onions and green chilies, and sauté.\n3. Add tomatoes and cook until soft.\n4. Pour in the whisked eggs and stir continuously on low heat to scramble them.\n5. Add salt, turmeric, and chili powder.\n6. Cook until eggs are set and serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&auto=format&fit=crop&q=80',
     calories: 210,
+    protein: 13.0,
+    carbs: 3.5,
+    fat: 16.0,
+    fiber: 0.8,
+    vitamins: 'Vitamin D, Vitamin B12, Riboflavin, Choline',
     ingredients: [
       { name: 'Egg', quantity: '3 units' },
       { name: 'Butter', quantity: '1 tbsp' },
@@ -172,6 +207,11 @@ const RECIPES = [
     instructions: '1. Marinate chicken with ginger-garlic paste, salt, yogurt, and spices.\n2. Grill or pan-fry chicken until cooked.\n3. In a separate pan, melt butter and sauté onions and tomatoes.\n4. Blend the onion-tomato mixture to make a smooth gravy.\n5. Heat gravy, add cream, spices, and chicken.\n6. Simmer for 10 minutes. Serve hot.',
     imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&auto=format&fit=crop&q=80',
     calories: 450,
+    protein: 28.0,
+    carbs: 10.0,
+    fat: 33.0,
+    fiber: 1.5,
+    vitamins: 'Vitamin A, Calcium, Niacin, Vitamin B6',
     ingredients: [
       { name: 'Chicken', quantity: '300g' },
       { name: 'Butter', quantity: '3 tbsp' },
@@ -192,6 +232,11 @@ const RECIPES = [
     instructions: '1. Wash and chop cucumber, tomatoes, and carrots into bite-sized pieces.\n2. Toss them in a mixing bowl.\n3. Add freshly squeezed lemon juice.\n4. Season with salt and pepper.\n5. Mix well and serve immediately.',
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&auto=format&fit=crop&q=80',
     calories: 60,
+    protein: 1.5,
+    carbs: 12.0,
+    fat: 0.5,
+    fiber: 3.5,
+    vitamins: 'Vitamin C, Vitamin A, Vitamin K, Potassium',
     ingredients: [
       { name: 'Cucumber', quantity: '1 unit' },
       { name: 'Tomato', quantity: '1 medium' },
@@ -227,7 +272,12 @@ async function main() {
         difficultyLevel: r.difficulty,
         instructions: r.instructions,
         imageUrl: r.imageUrl,
-        calories: r.calories
+        calories: r.calories,
+        protein: r.protein,
+        carbs: r.carbs,
+        fat: r.fat,
+        fiber: r.fiber,
+        vitamins: r.vitamins
       },
       create: {
         recipeName: r.name,
@@ -236,7 +286,12 @@ async function main() {
         difficultyLevel: r.difficulty,
         instructions: r.instructions,
         imageUrl: r.imageUrl,
-        calories: r.calories
+        calories: r.calories,
+        protein: r.protein,
+        carbs: r.carbs,
+        fat: r.fat,
+        fiber: r.fiber,
+        vitamins: r.vitamins
       }
     });
 

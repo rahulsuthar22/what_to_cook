@@ -99,6 +99,11 @@ export const RecipeScalarFieldEnum = {
   instructions: 'instructions',
   imageUrl: 'imageUrl',
   calories: 'calories',
+  protein: 'protein',
+  carbs: 'carbs',
+  fat: 'fat',
+  fiber: 'fiber',
+  vitamins: 'vitamins',
   createdAt: 'createdAt'
 } as const
 

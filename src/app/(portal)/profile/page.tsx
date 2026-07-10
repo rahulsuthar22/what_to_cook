@@ -132,17 +132,6 @@ export default function ProfilePage() {
               {isAdmin ? roleName : preference}
             </span>
           </div>
-
-          <div style={{ borderTop: '1px solid var(--border-color)', width: '100%', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Account Type:</span>
-              <strong style={{ color: isAdmin ? 'var(--primary)' : 'var(--text-primary)', fontWeight: 650 }}>{roleName}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Security Method:</span>
-              <strong style={{ color: 'var(--text-primary)' }}>NextAuth JWT</strong>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Profile Edit Form */}

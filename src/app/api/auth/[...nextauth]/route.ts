@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '@/config/db';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,11 +26,30 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email is required');
         }
 
-        const email = credentials.email.toLowerCase();
-        const rawPassword = credentials.password || 'default_password';
+        const email = credentials.email.toLowerCase().trim();
+        const rawPassword = credentials.password;
 
         // 1. REGISTRATION FLOW
         if (credentials.isRegistering === 'true') {
+          // Strict Validation Rules (Production-Grade)
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error('Please provide a valid email address.');
+          }
+
+          if (!rawPassword || rawPassword.length < 6) {
+            throw new Error('Password must be at least 6 characters long.');
+          }
+
+          const fullName = credentials.fullName?.trim() || '';
+          if (!fullName || fullName.length < 2) {
+            throw new Error('Full Name must be at least 2 characters long.');
+          }
+
+          const mobileNumber = credentials.mobileNumber?.trim() || '';
+          if (mobileNumber && !/^\+?[0-9\s\-]{7,15}$/.test(mobileNumber)) {
+            throw new Error('Please provide a valid phone number format.');
+          }
+
           const existingUser = await prisma.user.findUnique({
             where: { email },
           });
@@ -41,17 +61,17 @@ export const authOptions: NextAuthOptions = {
           // Generate secure password hash
           const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-          // Generate a clean user ID
-          const userId = 'usr_' + Math.random().toString(36).substring(2, 11);
+          // Generate a clean secure user ID
+          const userId = 'usr_' + crypto.randomUUID();
           
           const newUser = await prisma.user.create({
             data: {
               id: userId,
-              fullName: credentials.fullName || 'User',
-              email: email,
-              mobileNumber: credentials.mobileNumber || '',
+              fullName,
+              email,
+              mobileNumber,
               dietaryPreference: credentials.dietaryPreference || 'None',
-              passwordHash: passwordHash,
+              passwordHash,
             },
           });
 
@@ -63,6 +83,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         // 2. LOGIN FLOW
+        if (!rawPassword) {
+          throw new Error('Password is required.');
+        }
+
         // Check if the user is an admin first
         const admin = await prisma.admin.findUnique({
           where: { email },
@@ -90,18 +114,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error('No account found with this email. Please register first.');
         }
 
-        if (user.passwordHash) {
-          const passwordMatch = await bcrypt.compare(rawPassword, user.passwordHash);
-          if (!passwordMatch) {
-            throw new Error('Invalid email or password.');
-          }
-        } else {
-          // Transparently migrate and hash password for existing seed users on first login
-          const passwordHash = await bcrypt.hash(rawPassword, 10);
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { passwordHash },
-          });
+        if (!user.passwordHash) {
+          throw new Error('This account was registered using Google. Please sign in with Google.');
+        }
+
+        const passwordMatch = await bcrypt.compare(rawPassword, user.passwordHash);
+        if (!passwordMatch) {
+          throw new Error('Invalid email or password.');
         }
 
         return {

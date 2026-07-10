@@ -34,6 +34,11 @@ model Recipe {
   instructions       String             @db.Text
   imageUrl           String?            @map("image_url") @db.VarChar(255)
   calories           Int                @default(0)
+  protein            Float              @default(0)
+  carbs              Float              @default(0)
+  fat                Float              @default(0)
+  fiber              Float              @default(0)
+  vitamins           String?            @db.VarChar(255)
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
   recipeIngredients  RecipeIngredient[]
   mealPlans          MealPlan[]

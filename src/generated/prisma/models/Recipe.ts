@@ -30,12 +30,20 @@ export type RecipeAvgAggregateOutputType = {
   id: number | null
   cookingTime: number | null
   calories: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+  fiber: number | null
 }
 
 export type RecipeSumAggregateOutputType = {
   id: number | null
   cookingTime: number | null
   calories: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+  fiber: number | null
 }
 
 export type RecipeMinAggregateOutputType = {
@@ -47,6 +55,11 @@ export type RecipeMinAggregateOutputType = {
   instructions: string | null
   imageUrl: string | null
   calories: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+  fiber: number | null
+  vitamins: string | null
   createdAt: Date | null
 }
 
@@ -59,6 +72,11 @@ export type RecipeMaxAggregateOutputType = {
   instructions: string | null
   imageUrl: string | null
   calories: number | null
+  protein: number | null
+  carbs: number | null
+  fat: number | null
+  fiber: number | null
+  vitamins: string | null
   createdAt: Date | null
 }
 
@@ -71,6 +89,11 @@ export type RecipeCountAggregateOutputType = {
   instructions: number
   imageUrl: number
   calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber: number
+  vitamins: number
   createdAt: number
   _all: number
 }
@@ -80,12 +103,20 @@ export type RecipeAvgAggregateInputType = {
   id?: true
   cookingTime?: true
   calories?: true
+  protein?: true
+  carbs?: true
+  fat?: true
+  fiber?: true
 }
 
 export type RecipeSumAggregateInputType = {
   id?: true
   cookingTime?: true
   calories?: true
+  protein?: true
+  carbs?: true
+  fat?: true
+  fiber?: true
 }
 
 export type RecipeMinAggregateInputType = {
@@ -97,6 +128,11 @@ export type RecipeMinAggregateInputType = {
   instructions?: true
   imageUrl?: true
   calories?: true
+  protein?: true
+  carbs?: true
+  fat?: true
+  fiber?: true
+  vitamins?: true
   createdAt?: true
 }
 
@@ -109,6 +145,11 @@ export type RecipeMaxAggregateInputType = {
   instructions?: true
   imageUrl?: true
   calories?: true
+  protein?: true
+  carbs?: true
+  fat?: true
+  fiber?: true
+  vitamins?: true
   createdAt?: true
 }
 
@@ -121,6 +162,11 @@ export type RecipeCountAggregateInputType = {
   instructions?: true
   imageUrl?: true
   calories?: true
+  protein?: true
+  carbs?: true
+  fat?: true
+  fiber?: true
+  vitamins?: true
   createdAt?: true
   _all?: true
 }
@@ -220,6 +266,11 @@ export type RecipeGroupByOutputType = {
   instructions: string
   imageUrl: string | null
   calories: number
+  protein: number
+  carbs: number
+  fat: number
+  fiber: number
+  vitamins: string | null
   createdAt: Date
   _count: RecipeCountAggregateOutputType | null
   _avg: RecipeAvgAggregateOutputType | null
@@ -255,6 +306,11 @@ export type RecipeWhereInput = {
   instructions?: Prisma.StringFilter<"Recipe"> | string
   imageUrl?: Prisma.StringNullableFilter<"Recipe"> | string | null
   calories?: Prisma.IntFilter<"Recipe"> | number
+  protein?: Prisma.FloatFilter<"Recipe"> | number
+  carbs?: Prisma.FloatFilter<"Recipe"> | number
+  fat?: Prisma.FloatFilter<"Recipe"> | number
+  fiber?: Prisma.FloatFilter<"Recipe"> | number
+  vitamins?: Prisma.StringNullableFilter<"Recipe"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Recipe"> | Date | string
   recipeIngredients?: Prisma.RecipeIngredientListRelationFilter
   mealPlans?: Prisma.MealPlanListRelationFilter
@@ -269,6 +325,11 @@ export type RecipeOrderByWithRelationInput = {
   instructions?: Prisma.SortOrder
   imageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
+  vitamins?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   recipeIngredients?: Prisma.RecipeIngredientOrderByRelationAggregateInput
   mealPlans?: Prisma.MealPlanOrderByRelationAggregateInput
@@ -286,6 +347,11 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
   instructions?: Prisma.StringFilter<"Recipe"> | string
   imageUrl?: Prisma.StringNullableFilter<"Recipe"> | string | null
   calories?: Prisma.IntFilter<"Recipe"> | number
+  protein?: Prisma.FloatFilter<"Recipe"> | number
+  carbs?: Prisma.FloatFilter<"Recipe"> | number
+  fat?: Prisma.FloatFilter<"Recipe"> | number
+  fiber?: Prisma.FloatFilter<"Recipe"> | number
+  vitamins?: Prisma.StringNullableFilter<"Recipe"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Recipe"> | Date | string
   recipeIngredients?: Prisma.RecipeIngredientListRelationFilter
   mealPlans?: Prisma.MealPlanListRelationFilter
@@ -300,6 +366,11 @@ export type RecipeOrderByWithAggregationInput = {
   instructions?: Prisma.SortOrder
   imageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
+  vitamins?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.RecipeCountOrderByAggregateInput
   _avg?: Prisma.RecipeAvgOrderByAggregateInput
@@ -320,6 +391,11 @@ export type RecipeScalarWhereWithAggregatesInput = {
   instructions?: Prisma.StringWithAggregatesFilter<"Recipe"> | string
   imageUrl?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   calories?: Prisma.IntWithAggregatesFilter<"Recipe"> | number
+  protein?: Prisma.FloatWithAggregatesFilter<"Recipe"> | number
+  carbs?: Prisma.FloatWithAggregatesFilter<"Recipe"> | number
+  fat?: Prisma.FloatWithAggregatesFilter<"Recipe"> | number
+  fiber?: Prisma.FloatWithAggregatesFilter<"Recipe"> | number
+  vitamins?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Recipe"> | Date | string
 }
 
@@ -331,6 +407,11 @@ export type RecipeCreateInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   recipeIngredients?: Prisma.RecipeIngredientCreateNestedManyWithoutRecipeInput
   mealPlans?: Prisma.MealPlanCreateNestedManyWithoutRecipeInput
@@ -345,6 +426,11 @@ export type RecipeUncheckedCreateInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   recipeIngredients?: Prisma.RecipeIngredientUncheckedCreateNestedManyWithoutRecipeInput
   mealPlans?: Prisma.MealPlanUncheckedCreateNestedManyWithoutRecipeInput
@@ -358,6 +444,11 @@ export type RecipeUpdateInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipeIngredients?: Prisma.RecipeIngredientUpdateManyWithoutRecipeNestedInput
   mealPlans?: Prisma.MealPlanUpdateManyWithoutRecipeNestedInput
@@ -372,6 +463,11 @@ export type RecipeUncheckedUpdateInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipeIngredients?: Prisma.RecipeIngredientUncheckedUpdateManyWithoutRecipeNestedInput
   mealPlans?: Prisma.MealPlanUncheckedUpdateManyWithoutRecipeNestedInput
@@ -386,6 +482,11 @@ export type RecipeCreateManyInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
 }
 
@@ -397,6 +498,11 @@ export type RecipeUpdateManyMutationInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -409,6 +515,11 @@ export type RecipeUncheckedUpdateManyInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -421,6 +532,11 @@ export type RecipeCountOrderByAggregateInput = {
   instructions?: Prisma.SortOrder
   imageUrl?: Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
+  vitamins?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -428,6 +544,10 @@ export type RecipeAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   cookingTime?: Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
 }
 
 export type RecipeMaxOrderByAggregateInput = {
@@ -439,6 +559,11 @@ export type RecipeMaxOrderByAggregateInput = {
   instructions?: Prisma.SortOrder
   imageUrl?: Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
+  vitamins?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -451,6 +576,11 @@ export type RecipeMinOrderByAggregateInput = {
   instructions?: Prisma.SortOrder
   imageUrl?: Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
+  vitamins?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -458,6 +588,10 @@ export type RecipeSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   cookingTime?: Prisma.SortOrder
   calories?: Prisma.SortOrder
+  protein?: Prisma.SortOrder
+  carbs?: Prisma.SortOrder
+  fat?: Prisma.SortOrder
+  fiber?: Prisma.SortOrder
 }
 
 export type RecipeScalarRelationFilter = {
@@ -466,6 +600,14 @@ export type RecipeScalarRelationFilter = {
 }
 
 export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type FloatFieldUpdateOperationsInput = {
   set?: number
   increment?: number
   decrement?: number
@@ -509,6 +651,11 @@ export type RecipeCreateWithoutRecipeIngredientsInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   mealPlans?: Prisma.MealPlanCreateNestedManyWithoutRecipeInput
 }
@@ -522,6 +669,11 @@ export type RecipeUncheckedCreateWithoutRecipeIngredientsInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   mealPlans?: Prisma.MealPlanUncheckedCreateNestedManyWithoutRecipeInput
 }
@@ -550,6 +702,11 @@ export type RecipeUpdateWithoutRecipeIngredientsInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   mealPlans?: Prisma.MealPlanUpdateManyWithoutRecipeNestedInput
 }
@@ -563,6 +720,11 @@ export type RecipeUncheckedUpdateWithoutRecipeIngredientsInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   mealPlans?: Prisma.MealPlanUncheckedUpdateManyWithoutRecipeNestedInput
 }
@@ -575,6 +737,11 @@ export type RecipeCreateWithoutMealPlansInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   recipeIngredients?: Prisma.RecipeIngredientCreateNestedManyWithoutRecipeInput
 }
@@ -588,6 +755,11 @@ export type RecipeUncheckedCreateWithoutMealPlansInput = {
   instructions: string
   imageUrl?: string | null
   calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  fiber?: number
+  vitamins?: string | null
   createdAt?: Date | string
   recipeIngredients?: Prisma.RecipeIngredientUncheckedCreateNestedManyWithoutRecipeInput
 }
@@ -616,6 +788,11 @@ export type RecipeUpdateWithoutMealPlansInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipeIngredients?: Prisma.RecipeIngredientUpdateManyWithoutRecipeNestedInput
 }
@@ -629,6 +806,11 @@ export type RecipeUncheckedUpdateWithoutMealPlansInput = {
   instructions?: Prisma.StringFieldUpdateOperationsInput | string
   imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   calories?: Prisma.IntFieldUpdateOperationsInput | number
+  protein?: Prisma.FloatFieldUpdateOperationsInput | number
+  carbs?: Prisma.FloatFieldUpdateOperationsInput | number
+  fat?: Prisma.FloatFieldUpdateOperationsInput | number
+  fiber?: Prisma.FloatFieldUpdateOperationsInput | number
+  vitamins?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipeIngredients?: Prisma.RecipeIngredientUncheckedUpdateManyWithoutRecipeNestedInput
 }
@@ -682,6 +864,11 @@ export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   instructions?: boolean
   imageUrl?: boolean
   calories?: boolean
+  protein?: boolean
+  carbs?: boolean
+  fat?: boolean
+  fiber?: boolean
+  vitamins?: boolean
   createdAt?: boolean
   recipeIngredients?: boolean | Prisma.Recipe$recipeIngredientsArgs<ExtArgs>
   mealPlans?: boolean | Prisma.Recipe$mealPlansArgs<ExtArgs>
@@ -697,6 +884,11 @@ export type RecipeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   instructions?: boolean
   imageUrl?: boolean
   calories?: boolean
+  protein?: boolean
+  carbs?: boolean
+  fat?: boolean
+  fiber?: boolean
+  vitamins?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["recipe"]>
 
@@ -709,6 +901,11 @@ export type RecipeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   instructions?: boolean
   imageUrl?: boolean
   calories?: boolean
+  protein?: boolean
+  carbs?: boolean
+  fat?: boolean
+  fiber?: boolean
+  vitamins?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["recipe"]>
 
@@ -721,10 +918,15 @@ export type RecipeSelectScalar = {
   instructions?: boolean
   imageUrl?: boolean
   calories?: boolean
+  protein?: boolean
+  carbs?: boolean
+  fat?: boolean
+  fiber?: boolean
+  vitamins?: boolean
   createdAt?: boolean
 }
 
-export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recipeName" | "category" | "cookingTime" | "difficultyLevel" | "instructions" | "imageUrl" | "calories" | "createdAt", ExtArgs["result"]["recipe"]>
+export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recipeName" | "category" | "cookingTime" | "difficultyLevel" | "instructions" | "imageUrl" | "calories" | "protein" | "carbs" | "fat" | "fiber" | "vitamins" | "createdAt", ExtArgs["result"]["recipe"]>
 export type RecipeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   recipeIngredients?: boolean | Prisma.Recipe$recipeIngredientsArgs<ExtArgs>
   mealPlans?: boolean | Prisma.Recipe$mealPlansArgs<ExtArgs>
@@ -748,6 +950,11 @@ export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     instructions: string
     imageUrl: string | null
     calories: number
+    protein: number
+    carbs: number
+    fat: number
+    fiber: number
+    vitamins: string | null
     createdAt: Date
   }, ExtArgs["result"]["recipe"]>
   composites: {}
@@ -1182,6 +1389,11 @@ export interface RecipeFieldRefs {
   readonly instructions: Prisma.FieldRef<"Recipe", 'String'>
   readonly imageUrl: Prisma.FieldRef<"Recipe", 'String'>
   readonly calories: Prisma.FieldRef<"Recipe", 'Int'>
+  readonly protein: Prisma.FieldRef<"Recipe", 'Float'>
+  readonly carbs: Prisma.FieldRef<"Recipe", 'Float'>
+  readonly fat: Prisma.FieldRef<"Recipe", 'Float'>
+  readonly fiber: Prisma.FieldRef<"Recipe", 'Float'>
+  readonly vitamins: Prisma.FieldRef<"Recipe", 'String'>
   readonly createdAt: Prisma.FieldRef<"Recipe", 'DateTime'>
 }
     
