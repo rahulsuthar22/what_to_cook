@@ -89,7 +89,7 @@ export default function ProfilePage() {
       )}
 
       {/* Main Profile Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="profile-layout-grid" style={{ alignItems: 'start' }}>
         
         {/* Left Side: Avatar & Stats Card */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', padding: '2.5rem 1.5rem' }}>

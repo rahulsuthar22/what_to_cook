@@ -493,7 +493,7 @@ export default function RecipeDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Main Split Section: Content & Sidebar Suggestions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '2rem', alignItems: 'start' }}>
+      <div className="recipe-details-grid" style={{ alignItems: 'start' }}>
         
         {/* Left Column: Interactive Tabs Container */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

@@ -21,6 +21,8 @@ model User {
   createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
   mealPlans          MealPlan[]
   groceryLists       GroceryList[]
+  recipeLikes        RecipeLike[]
+  recipeComments     RecipeComment[]
 
   @@map("users")
 }
@@ -42,6 +44,8 @@ model Recipe {
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
   recipeIngredients  RecipeIngredient[]
   mealPlans          MealPlan[]
+  recipeLikes        RecipeLike[]
+  recipeComments     RecipeComment[]
 
   @@map("recipes")
 }
@@ -99,4 +103,28 @@ model Admin {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
   @@map("admins")
+}
+
+model RecipeLike {
+  id        Int      @id @default(autoincrement()) @map("id")
+  userId    String   @map("user_id") @db.VarChar(128)
+  recipeId  Int      @map("recipe_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, recipeId])
+  @@map("recipe_likes")
+}
+
+model RecipeComment {
+  id        Int      @id @default(autoincrement()) @map("id")
+  userId    String   @map("user_id") @db.VarChar(128)
+  recipeId  Int      @map("recipe_id")
+  comment   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("recipe_comments")
 }

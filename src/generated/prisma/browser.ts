@@ -52,3 +52,13 @@ export type GroceryList = Prisma.GroceryListModel
  * 
  */
 export type Admin = Prisma.AdminModel
+/**
+ * Model RecipeLike
+ * 
+ */
+export type RecipeLike = Prisma.RecipeLikeModel
+/**
+ * Model RecipeComment
+ * 
+ */
+export type RecipeComment = Prisma.RecipeCommentModel

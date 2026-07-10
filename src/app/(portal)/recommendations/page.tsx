@@ -435,7 +435,7 @@ export default function RecommendationsPage() {
         </h3>
 
         {/* Custom Input */}
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           <input
             type="text"
             className="form-control"
@@ -443,11 +443,12 @@ export default function RecommendationsPage() {
             value={customIngredient}
             onChange={(e) => setCustomIngredient(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient(customIngredient)}
-            style={{ flex: 1 }}
+            style={{ flex: '1 1 200px', minWidth: '0' }}
           />
           <button 
             className="btn btn-primary"
             onClick={() => handleAddIngredient(customIngredient)}
+            style={{ flex: '1 0 auto' }}
           >
             <Plus size={18} />
             <span>Add</span>
@@ -580,7 +581,7 @@ export default function RecommendationsPage() {
                   flexDirection: 'column', 
                   gap: '0.85rem', 
                   padding: '1rem',
-                  maxWidth: '360px',
+                  width: '100%',
                   borderRadius: 'var(--border-radius-md)'
                 }}
               >
@@ -745,7 +746,7 @@ export default function RecommendationsPage() {
                     flexDirection: 'column', 
                     gap: '0.85rem', 
                     padding: '1rem',
-                    maxWidth: '360px',
+                    width: '100%',
                     borderRadius: 'var(--border-radius-md)'
                   }}
                 >

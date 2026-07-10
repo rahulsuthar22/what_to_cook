@@ -172,7 +172,7 @@ export default function GroceryPage() {
       </div>
 
       {/* Main Grid: Form + List */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="grocery-layout-grid" style={{ alignItems: 'start' }}>
         
         {/* Form: Add Custom Item */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
