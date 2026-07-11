@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
 
-// GET /api/grocery - Retrieve grocery list for a user
+// GET /api/grocery - Retrieve grocery list for a user (with recipe associations)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,14 +19,60 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    const formattedList = groceryList.map(g => ({
-      grocery_id: g.id,
-      user_id: g.userId,
-      ingredient_name: g.ingredientName,
-      quantity: g.quantity,
-      status: g.status,
-      created_at: g.createdAt,
-    }));
+    // Look up which planned recipes use each ingredient + per-recipe quantity
+    const userMealPlans = await prisma.mealPlan.findMany({
+      where: { userId },
+      include: {
+        recipe: {
+          include: {
+            recipeIngredients: {
+              include: {
+                ingredient: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Build a map: ingredient name (lowercase) -> array of { recipe, quantity }
+    const ingredientDetails = new Map<string, { recipe: string; quantity: string }[]>();
+    for (const plan of userMealPlans) {
+      for (const ri of plan.recipe.recipeIngredients) {
+        const ingName = ri.ingredient.ingredientName.trim().toLowerCase();
+        if (!ingredientDetails.has(ingName)) {
+          ingredientDetails.set(ingName, []);
+        }
+        // Avoid duplicate recipe entries for same ingredient
+        const existing = ingredientDetails.get(ingName)!;
+        if (!existing.some(e => e.recipe === plan.recipe.recipeName)) {
+          existing.push({
+            recipe: plan.recipe.recipeName,
+            quantity: ri.quantity || 'as needed',
+          });
+        }
+      }
+    }
+
+    const formattedList = groceryList.map(g => {
+      const details = ingredientDetails.get(g.ingredientName.trim().toLowerCase()) || [];
+      const recipeNames = details.map(d => d.recipe);
+      // Build a combined total quantity string: "1.5 tsp + 2 tbsp + 300g"
+      const totalParts = details.map(d => `${d.quantity} (${d.recipe})`);
+      const totalQuantity = totalParts.length > 0 ? totalParts.join(' + ') : g.quantity;
+
+      return {
+        grocery_id: g.id,
+        user_id: g.userId,
+        ingredient_name: g.ingredientName,
+        quantity: g.quantity,
+        status: g.status,
+        created_at: g.createdAt,
+        used_in: recipeNames,
+        recipe_quantities: details, // [{recipe: "Pasta", quantity: "1.5 tsp"}, ...]
+        total_quantity: totalQuantity,
+      };
+    });
 
     return NextResponse.json({ success: true, groceryList: formattedList });
   } catch (error: any) {
@@ -63,6 +109,9 @@ export async function POST(request: NextRequest) {
       ingredient_name: item.ingredientName,
       quantity: item.quantity,
       status: item.status,
+      used_in: [],
+      recipe_quantities: [],
+      total_quantity: item.quantity,
     };
 
     return NextResponse.json({ success: true, item: formattedItem }, { status: 201 });
@@ -72,11 +121,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/grocery - Update grocery item status or quantity
+// PUT /api/grocery - Update grocery item status, quantity, or name
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { grocery_id, status, quantity } = body;
+    const { grocery_id, status, quantity, ingredient_name } = body;
 
     if (!grocery_id) {
       return NextResponse.json({ success: false, error: 'grocery_id is required' }, { status: 400 });
@@ -88,6 +137,9 @@ export async function PUT(request: NextRequest) {
     }
     if (quantity) {
       updateData.quantity = quantity;
+    }
+    if (ingredient_name) {
+      updateData.ingredientName = ingredient_name;
     }
 
     if (Object.keys(updateData).length === 0) {

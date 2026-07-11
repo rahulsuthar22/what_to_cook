@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
+import { getVideoUrl } from './[id]/route';
 
 interface IngredientInput {
   name: string;
@@ -50,6 +51,12 @@ export async function GET(request: NextRequest) {
       instructions: r.instructions,
       image_url: r.imageUrl,
       calories: r.calories,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+      fiber: r.fiber,
+      vitamins: r.vitamins,
+      video_url: getVideoUrl(r.recipeName),
       ingredients: r.recipeIngredients.map(ri => ({
         name: ri.ingredient.ingredientName,
         category: ri.ingredient.category,
@@ -76,6 +83,11 @@ export async function POST(request: NextRequest) {
       instructions, 
       image_url, 
       calories, 
+      protein,
+      carbs,
+      fat,
+      fiber,
+      vitamins,
       ingredients 
     } = body;
 
@@ -98,6 +110,11 @@ export async function POST(request: NextRequest) {
           instructions,
           imageUrl: image_url || null,
           calories: parseInt(calories || '0', 10),
+          protein: parseFloat(protein || '0'),
+          carbs: parseFloat(carbs || '0'),
+          fat: parseFloat(fat || '0'),
+          fiber: parseFloat(fiber || '0'),
+          vitamins: vitamins || null,
         },
       });
 
@@ -140,6 +157,11 @@ export async function POST(request: NextRequest) {
       instructions: resultRecipe.instructions,
       image_url: resultRecipe.imageUrl,
       calories: resultRecipe.calories,
+      protein: resultRecipe.protein,
+      carbs: resultRecipe.carbs,
+      fat: resultRecipe.fat,
+      fiber: resultRecipe.fiber,
+      vitamins: resultRecipe.vitamins,
     };
 
     return NextResponse.json({ success: true, recipe: formattedRecipe }, { status: 201 });

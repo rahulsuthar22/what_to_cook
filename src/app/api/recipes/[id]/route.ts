@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
 
+export function getVideoUrl(recipeName: string): string {
+  const name = recipeName.toLowerCase();
+  if (name.includes('paneer butter masala')) return 'https://www.youtube.com/embed/S2G4d5W9gUY';
+  if (name.includes('fried rice')) return 'https://www.youtube.com/embed/t_KcrgJ8q6s';
+  if (name.includes('tomato soup')) return 'https://www.youtube.com/embed/sA7stV4r-aE';
+  if (name.includes('aloo jeera')) return 'https://www.youtube.com/embed/c0JjHiaf-0A';
+  if (name.includes('spinach') || name.includes('palak')) return 'https://www.youtube.com/embed/f4_jK3Pz24w';
+  if (name.includes('paneer bhurji')) return 'https://www.youtube.com/embed/H0dZ7E2B0tU';
+  if (name.includes('egg bhurji')) return 'https://www.youtube.com/embed/aEszS82987E';
+  if (name.includes('butter chicken')) return 'https://www.youtube.com/embed/a03U45jFxOI';
+  if (name.includes('salad')) return 'https://www.youtube.com/embed/U33e8bY4v-Q';
+  return 'https://www.youtube.com/embed/w77zP6-oXgI';
+}
+
 // GET /api/recipes/[id] - Fetch detailed recipe by ID
 export async function GET(
   request: NextRequest,
@@ -38,6 +52,12 @@ export async function GET(
       instructions: recipe.instructions,
       image_url: recipe.imageUrl,
       calories: recipe.calories,
+      protein: recipe.protein,
+      carbs: recipe.carbs,
+      fat: recipe.fat,
+      fiber: recipe.fiber,
+      vitamins: recipe.vitamins,
+      video_url: getVideoUrl(recipe.recipeName),
       ingredients: recipe.recipeIngredients.map(ri => ({
         name: ri.ingredient.ingredientName,
         category: ri.ingredient.category,

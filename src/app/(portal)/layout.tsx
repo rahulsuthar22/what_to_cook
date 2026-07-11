@@ -41,11 +41,6 @@ export default function PortalLayout({
           animation: 'spin 1s linear infinite'
         }} />
         <span>Loading session...</span>
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     );
   }

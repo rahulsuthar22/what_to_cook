@@ -209,7 +209,7 @@ export default function AdminPage() {
       ) : null}
 
       {/* Main Grid split */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div className="admin-main-grid" style={{ alignItems: 'start' }}>
         
         {/* Form: Add New Recipe */}
         <div className="card">
@@ -249,7 +249,7 @@ export default function AdminPage() {
           )}
 
           <form onSubmit={handleAddRecipe} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+            <div className="admin-recipe-name-grid">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Recipe Name *</label>
                 <input
@@ -279,7 +279,7 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="admin-recipe-specs-grid">
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label">Cooking Time (mins)</label>
                 <input

@@ -9,6 +9,7 @@ export interface User {
   email: string;
   mobile_number?: string;
   dietary_preference?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user_id: uid,
           full_name: session?.user?.name || email.split('@')[0],
           email: email,
+          avatar_url: (session?.user as any)?.image || undefined,
         }),
       });
       const data = await res.json();
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.user.email,
           mobile_number: data.user.mobileNumber,
           dietary_preference: data.user.dietaryPreference,
+          avatarUrl: data.user.avatarUrl || undefined,
         });
       }
     } catch (err) {
@@ -137,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser({
           ...user,
           dietary_preference: data.user.dietaryPreference,
+          avatarUrl: data.user.avatarUrl || undefined,
         });
         return true;
       }
@@ -169,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.user.email,
           mobile_number: data.user.mobileNumber,
           dietary_preference: data.user.dietaryPreference,
+          avatarUrl: data.user.avatarUrl || undefined,
         });
         return true;
       }

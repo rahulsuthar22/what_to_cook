@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import { User, Phone, Mail, Award, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
+  const { data: session } = useSession();
   
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -13,6 +15,9 @@ export default function ProfilePage() {
   
   const [isSaving, setIsSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const isAdmin = (session?.user as any)?.role === 'Admin' || (session?.user as any)?.role === 'SuperAdmin';
+  const roleName = (session?.user as any)?.role || 'User';
 
   // Load initial context values
   useEffect(() => {
@@ -84,43 +89,48 @@ export default function ProfilePage() {
       )}
 
       {/* Main Profile Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem', alignItems: 'start' }}>
+      <div className="profile-layout-grid" style={{ alignItems: 'start' }}>
         
         {/* Left Side: Avatar & Stats Card */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', padding: '2.5rem 1.5rem' }}>
-          <div style={{
-            width: '90px',
-            height: '90px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontSize: '2rem',
-            fontWeight: 800,
-            boxShadow: '0 8px 20px rgba(255, 90, 54, 0.25)',
-            border: '3px solid rgba(255,255,255,0.1)'
-          }}>
-            {initials}
-          </div>
+          {user.avatarUrl ? (
+            <img 
+              src={user.avatarUrl} 
+              alt={user.displayName} 
+              style={{ 
+                width: '90px', 
+                height: '90px', 
+                borderRadius: '50%', 
+                objectFit: 'cover', 
+                boxShadow: '0 8px 20px rgba(255, 90, 54, 0.25)',
+                border: '3px solid rgba(255,255,255,0.1)'
+              }} 
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div style={{
+              width: '90px',
+              height: '90px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: '2rem',
+              fontWeight: 800,
+              boxShadow: '0 8px 20px rgba(255, 90, 54, 0.25)',
+              border: '3px solid rgba(255,255,255,0.1)'
+            }}>
+              {initials}
+            </div>
+          )}
 
           <div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{user.displayName}</h3>
             <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-              {preference}
+              {isAdmin ? roleName : preference}
             </span>
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border-color)', width: '100%', paddingTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>User ID:</span>
-              <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{user.uid.substring(0, 10)}...</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Security Method:</span>
-              <strong style={{ color: 'var(--text-primary)' }}>NextAuth JWT</strong>
-            </div>
           </div>
         </div>
 

@@ -26,12 +26,10 @@ The **Smart "What to Cook" Recommendation System** is a full-stack web applicati
 - **Authentication:** **NextAuth.js** Credentials Provider (industry-standard session and token JWT management)
 
 ```
-├── database/
-│   ├── schema.sql           # Database Table Definitions
-│   └── seeds.sql            # Recipe, Ingredient, and Mapping Seeds
 └── frontend-web/
     ├── prisma/
-    │   └── schema.prisma    # Prisma Schema Model Definitions
+    │   ├── schema.prisma    # Prisma Schema Model Definitions
+    │   └── seed.ts          # Programmatic Recipe, Ingredient, and Admin Seeds
     ├── src/
     │   ├── app/             # Next.js App Router (Pages & API Routes)
     │   │   ├── api/         # Backend REST API endpoints (Prisma-backed)
@@ -71,6 +69,11 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Prisma & NextAuth configurations
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/what_to_cook?schema=public"
+NEXTAUTH_SECRET="7a6c6d7a363738396c6d6e6f707172737475767778797a313233343536373839"
+NEXTAUTH_URL="http://localhost:3000"
 ```
 
 ### 2.1 Firebase Setup Guide
@@ -91,17 +94,16 @@ To get your own Firebase credentials, follow these steps:
      - `appId` &rarr; `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 ### 3. Database Initialization
-Verify that your PostgreSQL role `postgres` has the password set to `postgres`. Then run the following terminal commands to create and seed the database:
+Verify that your PostgreSQL credentials in `frontend-web/.env` are correct. Then run the following terminal commands to create the database, build tables, and seed initial data:
 
 ```bash
-# 1. Create the database (use 'postgres' as the password when prompted)
-PGPASSWORD="postgres" createdb -h localhost -U postgres what_to_cook
+# Run these commands from the frontend-web/ directory:
 
-# 2. Execute the schema (run from the project root directory)
-PGPASSWORD="postgres" psql -h localhost -U postgres -d what_to_cook -f database/schema.sql
+# 1. Create the database (if missing) and sync the Prisma schema
+npx prisma db push
 
-# 3. Load seed data
-PGPASSWORD="postgres" psql -h localhost -U postgres -d what_to_cook -f database/seeds.sql
+# 2. Seed default ingredients, recipes, and admin account
+npx prisma db seed
 ```
 
 ### 4. Install Dependencies & Start Server
