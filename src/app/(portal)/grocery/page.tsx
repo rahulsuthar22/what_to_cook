@@ -9,14 +9,26 @@ import {
   CheckSquare, 
   Square, 
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Pencil,
+  X,
+  Save,
+  Utensils
 } from 'lucide-react';
+
+interface RecipeQuantity {
+  recipe: string;
+  quantity: string;
+}
 
 interface GroceryItem {
   grocery_id: number;
   ingredient_name: string;
   quantity: string;
-  status: string; // 'Pending' or 'Completed'
+  status: string;
+  used_in: string[];
+  recipe_quantities: RecipeQuantity[];
+  total_quantity: string;
 }
 
 export default function GroceryPage() {
@@ -28,6 +40,12 @@ export default function GroceryPage() {
   const [itemName, setItemName] = useState('');
   const [itemQty, setItemQty] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+
+  // Edit state
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editQty, setEditQty] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -82,7 +100,6 @@ export default function GroceryPage() {
   const handleToggleStatus = async (item: GroceryItem) => {
     const newStatus = item.status === 'Completed' ? 'Pending' : 'Completed';
     try {
-      // Optimistic UI update
       setItems(items.map(i => i.grocery_id === item.grocery_id ? { ...i, status: newStatus } : i));
       
       const res = await fetch('/api/grocery', {
@@ -95,7 +112,6 @@ export default function GroceryPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        // Rollback on failure
         fetchGroceryList();
       }
     } catch (err) {
@@ -133,9 +149,182 @@ export default function GroceryPage() {
     }
   };
 
-  // Split items into pending and completed for structured display
+  const startEditing = (item: GroceryItem) => {
+    setEditingId(item.grocery_id);
+    setEditName(item.ingredient_name);
+    setEditQty(item.quantity);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditQty('');
+  };
+
+  const handleSaveEdit = async (groceryId: number) => {
+    if (!editName.trim() || !editQty.trim()) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/grocery', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grocery_id: groceryId,
+          ingredient_name: editName.trim(),
+          quantity: editQty.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setItems(items.map(i =>
+          i.grocery_id === groceryId
+            ? { ...i, ingredient_name: editName.trim(), quantity: editQty.trim() }
+            : i
+        ));
+        cancelEditing();
+      }
+    } catch (err) {
+      console.error('Error saving edit:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const pendingItems = items.filter(i => i.status === 'Pending');
   const completedItems = items.filter(i => i.status === 'Completed');
+
+  // Render a single grocery item row
+  const renderItem = (item: GroceryItem, isCompleted: boolean) => {
+    const isEditing = editingId === item.grocery_id;
+
+    return (
+      <div key={item.grocery_id} style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '0.8rem 1rem',
+        backgroundColor: isCompleted ? 'rgba(255, 255, 255, 0.01)' : 'var(--bg-surface-elevated)',
+        borderRadius: '8px',
+        border: '1px solid var(--border-color)',
+        opacity: isCompleted ? 0.6 : 1,
+        transition: 'var(--transition-fast)',
+      }}>
+        {/* Main row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }}
+            onClick={() => !isEditing && handleToggleStatus(item)}
+          >
+            {isCompleted 
+              ? <CheckSquare size={18} style={{ color: 'var(--success)', flexShrink: 0 }} />
+              : <Square size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            }
+            {isEditing ? (
+              <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  style={{ fontSize: '0.9rem', padding: '0.3rem 0.5rem' }}
+                  onClick={e => e.stopPropagation()}
+                />
+                <input
+                  type="text"
+                  className="form-control"
+                  value={editQty}
+                  onChange={e => setEditQty(e.target.value)}
+                  style={{ fontSize: '0.9rem', padding: '0.3rem 0.5rem', maxWidth: '120px' }}
+                  onClick={e => e.stopPropagation()}
+                />
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                <span style={{ 
+                  fontWeight: 600, fontSize: '0.95rem', 
+                  textDecoration: isCompleted ? 'line-through' : 'none' 
+                }}>
+                  {item.ingredient_name}
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.quantity}</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={() => handleSaveEdit(item.grocery_id)}
+                  disabled={isSaving}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--success)', cursor: 'pointer', padding: '0.3rem' }}
+                  title="Save"
+                >
+                  <Save size={16} />
+                </button>
+                <button
+                  onClick={cancelEditing}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.3rem' }}
+                  title="Cancel"
+                >
+                  <X size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                {!isCompleted && (
+                  <button 
+                    onClick={() => startEditing(item)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.3rem' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                    title="Edit item"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                <button 
+                  onClick={() => handleDeleteItem(item.grocery_id)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.3rem' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                  title="Delete item"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Recipe quantity breakdown */}
+        {!isEditing && item.recipe_quantities && item.recipe_quantities.length > 0 && (
+          <div style={{ marginLeft: '2.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {item.recipe_quantities.map((rq, idx) => (
+              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem' }}>
+                <Utensils size={10} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <span style={{ color: 'var(--text-secondary)' }}>{rq.quantity}</span>
+                <span style={{ color: 'var(--text-muted)' }}>for</span>
+                <span style={{
+                  color: 'var(--primary)',
+                  backgroundColor: 'rgba(255, 90, 54, 0.08)',
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}>{rq.recipe}</span>
+              </div>
+            ))}
+            {item.recipe_quantities.length > 1 && (
+              <div style={{ 
+                fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, 
+                marginTop: '0.15rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.25rem' 
+              }}>
+                Total needed: {item.total_quantity}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -259,37 +448,7 @@ export default function GroceryPage() {
                     Pending Items ({pendingItems.length})
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {pendingItems.map(item => (
-                      <div key={item.grocery_id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.8rem 1rem',
-                        backgroundColor: 'var(--bg-surface-elevated)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        transition: 'var(--transition-fast)'
-                      }}>
-                        <div 
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }}
-                          onClick={() => handleToggleStatus(item)}
-                        >
-                          <Square size={18} style={{ color: 'var(--text-muted)' }} />
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.ingredient_name}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.quantity}</span>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteItem(item.grocery_id)}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
+                    {pendingItems.map(item => renderItem(item, false))}
                   </div>
                 </div>
               )}
@@ -301,37 +460,7 @@ export default function GroceryPage() {
                     Completed Items ({completedItems.length})
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {completedItems.map(item => (
-                      <div key={item.grocery_id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.8rem 1rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.01)',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border-color)',
-                        opacity: 0.6
-                      }}>
-                        <div 
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }}
-                          onClick={() => handleToggleStatus(item)}
-                        >
-                          <CheckSquare size={18} style={{ color: 'var(--success)' }} />
-                          <div style={{ display: 'flex', flexDirection: 'column', textDecoration: 'line-through' }}>
-                            <span style={{ fontWeight: 500, fontSize: '0.95rem' }}>{item.ingredient_name}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.quantity}</span>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteItem(item.grocery_id)}
-                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--error)'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
+                    {completedItems.map(item => renderItem(item, true))}
                   </div>
                 </div>
               )}
