@@ -1,14 +1,6 @@
 # Smart "What to Cook" Recommendation System
 
-**Academic Project Submission**  
-**Submitted By:** Rahul Suthar  
-**Enrollment No:** VGU24ONS3MCA0031  
-**Course:** Master of Computer Applications (MCA)  
-**Institution:** Centre of Distance & Online Education (CDOE), Vivekanand Global University (VGU), Jaipur  
-**Academic Year:** 2025-26  
-**Project Guide:** Mr. Pankaj Kulkarni, Assistant Professor
 
----
 
 ## 📖 Project Overview
 
@@ -26,7 +18,7 @@ The **Smart "What to Cook" Recommendation System** is a full-stack web applicati
 - **Authentication:** **NextAuth.js** Credentials Provider (industry-standard session and token JWT management)
 
 ```
-└── frontend-web/
+└── what-to-cook/
     ├── prisma/
     │   ├── schema.prisma    # Prisma Schema Model Definitions
     │   └── seed.ts          # Programmatic Recipe, Ingredient, and Admin Seeds
@@ -52,7 +44,7 @@ Follow these steps to run the application locally:
 - **PostgreSQL** (running locally on port 5432 with password authentication configured).
 
 ### 2. Configure Environment Variables
-Create a `.env` file in the `frontend-web/` directory with the following variables:
+Create a `.env` file in the `what-to-cook/` directory with the following variables:
 
 ```env
 # Database Configuration
@@ -94,10 +86,10 @@ To get your own Firebase credentials, follow these steps:
      - `appId` &rarr; `NEXT_PUBLIC_FIREBASE_APP_ID`
 
 ### 3. Database Initialization
-Verify that your PostgreSQL credentials in `frontend-web/.env` are correct. Then run the following terminal commands to create the database, build tables, and seed initial data:
+Verify that your PostgreSQL credentials in `what-to-cook/.env` are correct. Then run the following terminal commands to create the database, build tables, and seed initial data:
 
 ```bash
-# Run these commands from the frontend-web/ directory:
+# Run these commands from the what-to-cook/ directory:
 
 # 1. Create the database (if missing) and sync the Prisma schema
 npx prisma db push
@@ -107,7 +99,7 @@ npx prisma db seed
 ```
 
 ### 4. Install Dependencies & Start Server
-Since Next.js 16 requires Node 20, load `nvm` and switch versions before running the server commands inside the `frontend-web/` directory:
+Since Next.js 16 requires Node 20, load `nvm` and switch versions before running the server commands inside the `what-to-cook/` directory:
 
 ```bash
 # 1. Load NVM and switch to Node 20
