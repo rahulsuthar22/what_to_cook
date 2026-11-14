@@ -25,7 +25,7 @@ interface IngredientDetail {
 }
 
 interface RecommendedRecipe {
-  recipe_id: number;
+  recipe_id: number | string;
   recipe_name: string;
   category: string;
   cooking_time: number;

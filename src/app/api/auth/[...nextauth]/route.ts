@@ -63,14 +63,13 @@ export const authOptions: NextAuthOptions = {
 
           // Generate a clean secure user ID
           const userId = 'usr_' + crypto.randomUUID();
-          
+
           const newUser = await prisma.user.create({
             data: {
               id: userId,
               fullName,
               email,
               mobileNumber,
-              dietaryPreference: credentials.dietaryPreference || 'None',
               passwordHash,
             },
           });

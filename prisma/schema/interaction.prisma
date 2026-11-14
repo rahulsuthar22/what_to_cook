@@ -1,0 +1,62 @@
+// ============================================================
+// RECIPE INTERACTIONS & SOCIAL
+// Views, clicks, favourites, ratings and reviews
+// ============================================================
+
+model RecipeInteraction {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId   String @map("user_id") @db.VarChar(128)
+  recipeId String @map("recipe_id") @db.Uuid
+
+  type   RecipeInteractionType
+  source InteractionSource?
+
+  sessionId String? @map("session_id") @db.VarChar(128)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@index([recipeId, type])
+  @@index([userId, recipeId])
+  @@index([type, createdAt])
+  @@map("recipe_interactions")
+}
+
+model RecipeFavourite {
+  userId   String @map("user_id") @db.VarChar(128)
+  recipeId String @map("recipe_id") @db.Uuid
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, recipeId])
+  @@index([recipeId])
+  @@map("recipe_favourites")
+}
+
+model RecipeReview {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId   String @map("user_id") @db.VarChar(128)
+  recipeId String @map("recipe_id") @db.Uuid
+
+  rating  Int
+  comment String? @db.Text
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([userId, recipeId])
+  @@index([recipeId, rating])
+  @@map("recipe_reviews")
+}
+

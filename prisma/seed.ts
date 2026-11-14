@@ -1,330 +1,895 @@
+import 'dotenv/config';
 import { prisma } from '../src/config/db';
+import { RecipeDifficulty, RecipeStatus } from '../src/generated/prisma/enums';
 
-const INGREDIENTS = [
-  // Dairy
-  { name: 'Paneer', category: 'Dairy' },
-  { name: 'Butter', category: 'Dairy' },
-  { name: 'Milk', category: 'Dairy' },
-  { name: 'Cream', category: 'Dairy' },
-  { name: 'Cheese', category: 'Dairy' },
-  // Vegetables
-  { name: 'Tomato', category: 'Vegetables' },
-  { name: 'Onion', category: 'Vegetables' },
-  { name: 'Potato', category: 'Vegetables' },
-  { name: 'Garlic', category: 'Vegetables' },
-  { name: 'Ginger', category: 'Vegetables' },
-  { name: 'Carrot', category: 'Vegetables' },
-  { name: 'Peas', category: 'Vegetables' },
-  { name: 'Capsicum', category: 'Vegetables' },
-  { name: 'Green Chili', category: 'Vegetables' },
-  { name: 'Spinach', category: 'Vegetables' },
-  { name: 'Cucumber', category: 'Vegetables' },
-  { name: 'Lemon', category: 'Vegetables' },
-  // Grains & Pantry
-  { name: 'Rice', category: 'Grains' },
-  { name: 'Wheat Flour', category: 'Grains' },
-  { name: 'Cooking Oil', category: 'Pantry' },
-  { name: 'Salt', category: 'Pantry' },
-  { name: 'Cumin Seeds', category: 'Pantry' },
-  { name: 'Turmeric Powder', category: 'Pantry' },
-  { name: 'Chili Powder', category: 'Pantry' },
-  { name: 'Garam Masala', category: 'Pantry' },
-  // Proteins
-  { name: 'Chicken', category: 'Proteins' },
-  { name: 'Egg', category: 'Proteins' },
-  { name: 'Tofu', category: 'Proteins' }
+// Helper to convert names into URL-friendly slugs
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+// ---------------------------------------------------------------------------
+// 1. UNITS OF MEASUREMENT
+// ---------------------------------------------------------------------------
+const UNITS = [
+  { name: 'Gram', symbol: 'g' },
+  { name: 'Kilogram', symbol: 'kg' },
+  { name: 'Milliliter', symbol: 'ml' },
+  { name: 'Liter', symbol: 'l' },
+  { name: 'Tablespoon', symbol: 'tbsp' },
+  { name: 'Teaspoon', symbol: 'tsp' },
+  { name: 'Cup', symbol: 'cup' },
+  { name: 'Piece', symbol: 'pc' },
+  { name: 'Bunch', symbol: 'bunch' },
+  { name: 'Unit', symbol: 'unit' },
+  { name: 'Pinch', symbol: 'pinch' },
 ];
 
-const RECIPES = [
+// ---------------------------------------------------------------------------
+// 2. CATEGORIES
+// ---------------------------------------------------------------------------
+const CATEGORIES = [
+  { name: 'Breakfast', description: 'Morning meals to jumpstart your day', sortOrder: 1 },
+  { name: 'Lunch', description: 'Midday meals, light to hearty', sortOrder: 2 },
+  { name: 'Dinner', description: 'Nourishing evening dinners', sortOrder: 3 },
+  { name: 'Snacks', description: 'Quick bites and evening snacks', sortOrder: 4 },
+  { name: 'Soup', description: 'Warm and comforting soups', sortOrder: 5 },
+  { name: 'Healthy', description: 'Nutrient-rich, wholesome recipes', sortOrder: 6 },
+  { name: 'Dessert', description: 'Sweet treats and desserts', sortOrder: 7 },
+];
+
+// ---------------------------------------------------------------------------
+// 3. CUISINES
+// ---------------------------------------------------------------------------
+const CUISINES = [
+  { name: 'Indian', description: 'Aromatic, spice-infused regional dishes from India' },
+  { name: 'Chinese', description: 'Stir-fries, rice, noodles, and dim sum' },
+  { name: 'Italian', description: 'Pastas, pizzas, and Mediterranean classics' },
+  { name: 'Continental', description: 'European and Continental style recipes' },
+  { name: 'Mexican', description: 'Tacos, burritos, salsas, and vibrant spices' },
+  { name: 'Global', description: 'Universal and fusion culinary creations' },
+];
+
+// ---------------------------------------------------------------------------
+// 4. DIETS
+// ---------------------------------------------------------------------------
+const DIETS = [
+  { name: 'Vegetarian', description: 'No meat or seafood' },
+  { name: 'Vegan', description: 'Plant-based, 100% dairy and meat free' },
+  { name: 'Non-Vegetarian', description: 'Includes poultry, meat, or seafood' },
+  { name: 'Gluten Free', description: 'Free of gluten proteins from wheat and barley' },
+  { name: 'Keto', description: 'Low carbohydrate, high healthy fat meals' },
+  { name: 'High Protein', description: 'Focus on muscle building and recovery' },
+];
+
+// ---------------------------------------------------------------------------
+// 5. ALLERGENS
+// ---------------------------------------------------------------------------
+const ALLERGENS = [
+  { name: 'Dairy', description: 'Cow or goat milk and derived dairy products' },
+  { name: 'Gluten', description: 'Wheat, rye, and barley derived proteins' },
+  { name: 'Egg', description: 'Poultry egg proteins' },
+  { name: 'Peanut', description: 'Peanuts and peanut derivatives' },
+  { name: 'Soy', description: 'Soybeans and soy-based ingredients' },
+  { name: 'Tree Nut', description: 'Almonds, cashews, walnuts, pistachios' },
+];
+
+// ---------------------------------------------------------------------------
+// 6. TAGS
+// ---------------------------------------------------------------------------
+const TAGS = [
+  { name: 'Quick & Easy', description: 'Can be cooked under 20 minutes' },
+  { name: 'Comfort Food', description: 'Hearty, soul-soothing dishes' },
+  { name: 'Spicy', description: 'Zesty, spicy, and bold flavours' },
+  { name: 'Budget Friendly', description: 'Everyday affordable pantry staples' },
+  { name: 'Party Special', description: 'Crowd-pleasers for celebrations' },
+  { name: 'Healthy', description: 'Low calorie, nutrient-dense nutrition' },
+];
+
+// ---------------------------------------------------------------------------
+// 7. INGREDIENTS WITH ALLERGEN MAPPINGS
+// ---------------------------------------------------------------------------
+interface IngredientSeed {
+  name: string;
+  allergens?: string[];
+}
+
+const INGREDIENTS: IngredientSeed[] = [
+  // Dairy
+  { name: 'Paneer', allergens: ['Dairy'] },
+  { name: 'Butter', allergens: ['Dairy'] },
+  { name: 'Milk', allergens: ['Dairy'] },
+  { name: 'Cream', allergens: ['Dairy'] },
+  { name: 'Cheese', allergens: ['Dairy'] },
+
+  // Vegetables
+  { name: 'Tomato' },
+  { name: 'Onion' },
+  { name: 'Potato' },
+  { name: 'Garlic' },
+  { name: 'Ginger' },
+  { name: 'Carrot' },
+  { name: 'Peas' },
+  { name: 'Capsicum' },
+  { name: 'Green Chili' },
+  { name: 'Spinach' },
+  { name: 'Cucumber' },
+  { name: 'Lemon' },
+
+  // Grains & Pantry
+  { name: 'Rice' },
+  { name: 'Wheat Flour', allergens: ['Gluten'] },
+  { name: 'Cooking Oil' },
+  { name: 'Salt' },
+  { name: 'Cumin Seeds' },
+  { name: 'Turmeric Powder' },
+  { name: 'Chili Powder' },
+  { name: 'Garam Masala' },
+
+  // Proteins
+  { name: 'Chicken' },
+  { name: 'Egg', allergens: ['Egg'] },
+  { name: 'Tofu', allergens: ['Soy'] },
+];
+
+// ---------------------------------------------------------------------------
+// 8. RECIPES SEED DATA
+// ---------------------------------------------------------------------------
+interface RecipeSeedIngredient {
+  name: string;
+  quantity: number;
+  unitSymbol: string;
+  preparationNote?: string;
+}
+
+interface RecipeSeedData {
+  name: string;
+  description: string;
+  difficulty: RecipeDifficulty;
+  prepTimeMinutes: number;
+  cookTimeMinutes: number;
+  servings: number;
+  imageUrl: string;
+  categories: string[];
+  cuisines: string[];
+  diets: string[];
+  tags: string[];
+  nutrition: {
+    caloriesKcal: number;
+    proteinG: number;
+    carbohydratesG: number;
+    fatG: number;
+    fibreG: number;
+  };
+  metadata: Record<string, any>;
+  steps: { stepNumber: number; instruction: string; durationMinutes?: number }[];
+  ingredients: RecipeSeedIngredient[];
+}
+
+const RECIPES: RecipeSeedData[] = [
   {
     name: 'Paneer Butter Masala',
-    category: 'Indian',
-    cookingTime: 30,
-    difficulty: 'Medium',
-    instructions: '1. Heat butter in a pan.\n2. Add chopped ginger, garlic, and onions; sauté until golden brown.\n3. Add pureed tomatoes and cook until oil separates.\n4. Mix in salt, turmeric, chili powder, and garam masala.\n5. Pour in cream and stir well.\n6. Add paneer cubes, cover and simmer for 5 minutes.\n7. Serve hot garnished with fresh cream.',
+    description: 'A rich, creamy, and mildly sweet Indian gravy made with fresh paneer cubes, tomatoes, and authentic spices.',
+    difficulty: RecipeDifficulty.MEDIUM,
+    prepTimeMinutes: 15,
+    cookTimeMinutes: 30,
+    servings: 4,
     imageUrl: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=600&auto=format&fit=crop&q=80',
-    calories: 320,
-    protein: 12.5,
-    carbs: 8.0,
-    fat: 26.0,
-    fiber: 2.1,
-    vitamins: 'Vitamin A, Calcium, Vitamin D',
+    categories: ['Lunch', 'Dinner'],
+    cuisines: ['Indian'],
+    diets: ['Vegetarian', 'Gluten Free'],
+    tags: ['Comfort Food', 'Party Special'],
+    nutrition: {
+      caloriesKcal: 320,
+      proteinG: 12.5,
+      carbohydratesG: 8.0,
+      fatG: 26.0,
+      fibreG: 2.1,
+    },
+    metadata: {
+      vitamins: 'Vitamin A, Calcium, Vitamin D',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Heat butter in a large pan on medium heat.', durationMinutes: 2 },
+      { stepNumber: 2, instruction: 'Add finely chopped ginger, minced garlic, and onions; sauté until golden brown.', durationMinutes: 5 },
+      { stepNumber: 3, instruction: 'Add smooth tomato puree and cook until butter starts separating from the edges.', durationMinutes: 8 },
+      { stepNumber: 4, instruction: 'Mix in salt, turmeric powder, Kashmiri red chili powder, and fragrant garam masala.', durationMinutes: 3 },
+      { stepNumber: 5, instruction: 'Pour in fresh cooking cream and stir well to create a velvety sauce.', durationMinutes: 3 },
+      { stepNumber: 6, instruction: 'Add fresh soft paneer cubes, cover with lid, and simmer gently on low heat.', durationMinutes: 5 },
+      { stepNumber: 7, instruction: 'Garnish with a swirl of fresh cream and chopped cilantro. Serve hot with naan or rice.', durationMinutes: 4 },
+    ],
     ingredients: [
-      { name: 'Paneer', quantity: '200g' },
-      { name: 'Butter', quantity: '2 tbsp' },
-      { name: 'Tomato', quantity: '3 medium' },
-      { name: 'Onion', quantity: '1 medium' },
-      { name: 'Cream', quantity: '2 tbsp' },
-      { name: 'Ginger', quantity: '1 tsp' },
-      { name: 'Garlic', quantity: '1 tsp' },
-      { name: 'Salt', quantity: '1 tsp' },
-      { name: 'Turmeric Powder', quantity: '1/2 tsp' },
-      { name: 'Chili Powder', quantity: '1 tsp' },
-      { name: 'Garam Masala', quantity: '1/2 tsp' }
-    ]
+      { name: 'Paneer', quantity: 200, unitSymbol: 'g', preparationNote: 'cubed' },
+      { name: 'Butter', quantity: 2, unitSymbol: 'tbsp' },
+      { name: 'Tomato', quantity: 3, unitSymbol: 'unit', preparationNote: 'pureed' },
+      { name: 'Onion', quantity: 1, unitSymbol: 'unit', preparationNote: 'finely chopped' },
+      { name: 'Cream', quantity: 2, unitSymbol: 'tbsp' },
+      { name: 'Ginger', quantity: 1, unitSymbol: 'tsp', preparationNote: 'grated' },
+      { name: 'Garlic', quantity: 1, unitSymbol: 'tsp', preparationNote: 'minced' },
+      { name: 'Salt', quantity: 1, unitSymbol: 'tsp' },
+      { name: 'Turmeric Powder', quantity: 0.5, unitSymbol: 'tsp' },
+      { name: 'Chili Powder', quantity: 1, unitSymbol: 'tsp' },
+      { name: 'Garam Masala', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Veg Fried Rice',
-    category: 'Chinese',
-    cookingTime: 20,
-    difficulty: 'Easy',
-    instructions: '1. Boil rice and let it cool completely.\n2. Heat oil in a large wok.\n3. Add finely chopped garlic, onions, carrots, and peas; stir-fry on high heat.\n4. Toss in the cold cooked rice.\n5. Season with salt and black pepper.\n6. Mix well and stir-fry for 3-5 minutes.\n7. Serve hot.',
+    description: 'Classic Indo-Chinese style wok-tossed fried rice loaded with crispy diced vegetables.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 10,
+    cookTimeMinutes: 20,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=600&auto=format&fit=crop&q=80',
-    calories: 250,
-    protein: 5.5,
-    carbs: 48.0,
-    fat: 4.5,
-    fiber: 3.2,
-    vitamins: 'Vitamin C, Vitamin B6, Iron',
+    categories: ['Lunch', 'Dinner'],
+    cuisines: ['Chinese'],
+    diets: ['Vegetarian', 'Vegan'],
+    tags: ['Quick & Easy'],
+    nutrition: {
+      caloriesKcal: 250,
+      proteinG: 5.5,
+      carbohydratesG: 48.0,
+      fatG: 4.5,
+      fibreG: 3.2,
+    },
+    metadata: {
+      vitamins: 'Vitamin C, Vitamin B6, Iron',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Boil rice beforehand and let it cool completely so grains remain separate.', durationMinutes: 10 },
+      { stepNumber: 2, instruction: 'Heat cooking oil in a large wok over high flame.', durationMinutes: 2 },
+      { stepNumber: 3, instruction: 'Add minced garlic and onions; toss quickly until aromatic.', durationMinutes: 2 },
+      { stepNumber: 4, instruction: 'Add finely diced carrots and green peas; stir-fry rapidly on high flame to maintain crunch.', durationMinutes: 3 },
+      { stepNumber: 5, instruction: 'Toss in cold cooked rice and spread gently.', durationMinutes: 2 },
+      { stepNumber: 6, instruction: 'Season with salt and freshly cracked black pepper.', durationMinutes: 1 },
+      { stepNumber: 7, instruction: 'Stir-fry briskly for 3 minutes until steaming hot and serve immediately.', durationMinutes: 3 },
+    ],
     ingredients: [
-      { name: 'Rice', quantity: '1 cup' },
-      { name: 'Carrot', quantity: '1/2 cup' },
-      { name: 'Peas', quantity: '1/4 cup' },
-      { name: 'Onion', quantity: '1 small' },
-      { name: 'Garlic', quantity: '1 tsp' },
-      { name: 'Cooking Oil', quantity: '2 tbsp' },
-      { name: 'Salt', quantity: '1 tsp' }
-    ]
+      { name: 'Rice', quantity: 1, unitSymbol: 'cup', preparationNote: 'cooked and cooled' },
+      { name: 'Carrot', quantity: 0.5, unitSymbol: 'cup', preparationNote: 'finely diced' },
+      { name: 'Peas', quantity: 0.25, unitSymbol: 'cup' },
+      { name: 'Onion', quantity: 1, unitSymbol: 'unit', preparationNote: 'small, finely chopped' },
+      { name: 'Garlic', quantity: 1, unitSymbol: 'tsp', preparationNote: 'minced' },
+      { name: 'Cooking Oil', quantity: 2, unitSymbol: 'tbsp' },
+      { name: 'Salt', quantity: 1, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Tomato Soup',
-    category: 'Soup',
-    cookingTime: 15,
-    difficulty: 'Easy',
-    instructions: '1. Heat butter in a pan.\n2. Add crushed garlic and onions; sauté.\n3. Add chopped tomatoes and cook until soft.\n4. Puree the cooked mixture until smooth.\n5. Strain back into the pot, add milk/water to adjust consistency.\n6. Season with salt and simmer for 5 minutes.\n7. Serve hot with croutons.',
+    description: 'Silky, soothing roasted tomato soup simmered with garlic, butter, and fragrant herbs.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 10,
+    cookTimeMinutes: 15,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1547592165-e1d17fed6005?w=600&auto=format&fit=crop&q=80',
-    calories: 120,
-    protein: 2.5,
-    carbs: 14.0,
-    fat: 6.0,
-    fiber: 1.8,
-    vitamins: 'Vitamin C, Vitamin A, Potassium',
+    categories: ['Soup', 'Dinner'],
+    cuisines: ['Continental'],
+    diets: ['Vegetarian', 'Gluten Free'],
+    tags: ['Comfort Food', 'Quick & Easy'],
+    nutrition: {
+      caloriesKcal: 120,
+      proteinG: 2.5,
+      carbohydratesG: 14.0,
+      fatG: 6.0,
+      fibreG: 1.8,
+    },
+    metadata: {
+      vitamins: 'Vitamin C, Vitamin A, Potassium',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Melt butter in a soup pot over medium heat.', durationMinutes: 2 },
+      { stepNumber: 2, instruction: 'Add crushed garlic cloves and chopped onions; sauté until translucent.', durationMinutes: 3 },
+      { stepNumber: 3, instruction: 'Add chopped ripe tomatoes and cook until thoroughly softened.', durationMinutes: 6 },
+      { stepNumber: 4, instruction: 'Blend the cooked mixture with an immersion blender until smooth.', durationMinutes: 2 },
+      { stepNumber: 5, instruction: 'Strain back into the pot and stir in milk or warm water to achieve desired consistency.', durationMinutes: 2 },
+      { stepNumber: 6, instruction: 'Season with salt and black pepper; simmer gently for 5 minutes.', durationMinutes: 5 },
+      { stepNumber: 7, instruction: 'Serve piping hot with crunchy croutons or toasted bread.', durationMinutes: 1 },
+    ],
     ingredients: [
-      { name: 'Tomato', quantity: '4 large' },
-      { name: 'Butter', quantity: '1 tbsp' },
-      { name: 'Garlic', quantity: '1 tsp' },
-      { name: 'Onion', quantity: '1/2 small' },
-      { name: 'Milk', quantity: '1/4 cup' },
-      { name: 'Salt', quantity: '1/2 tsp' }
-    ]
+      { name: 'Tomato', quantity: 4, unitSymbol: 'unit', preparationNote: 'ripe and chopped' },
+      { name: 'Butter', quantity: 1, unitSymbol: 'tbsp' },
+      { name: 'Garlic', quantity: 1, unitSymbol: 'tsp', preparationNote: 'crushed' },
+      { name: 'Onion', quantity: 0.5, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Milk', quantity: 0.25, unitSymbol: 'cup' },
+      { name: 'Salt', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Aloo Jeera',
-    category: 'Indian',
-    cookingTime: 15,
-    difficulty: 'Easy',
-    instructions: '1. Boil potatoes, peel and dice them.\n2. Heat cooking oil in a pan.\n3. Add cumin seeds (jeera) and let them splutter.\n4. Add ginger and green chilies.\n5. Toss in the diced potatoes, turmeric, chili powder, and salt.\n6. Sauté on medium heat for 5-7 minutes until potatoes turn crisp.\n7. Serve hot.',
+    description: 'Crispy cumin-tempered spiced potatoes cooked with green chilies, ginger, and turmeric.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 10,
+    cookTimeMinutes: 15,
+    servings: 3,
     imageUrl: 'https://images.unsplash.com/photo-1601050690597-df056fb4ce78?w=600&auto=format&fit=crop&q=80',
-    calories: 180,
-    protein: 3.0,
-    carbs: 32.0,
-    fat: 6.5,
-    fiber: 4.2,
-    vitamins: 'Vitamin C, Potassium, Vitamin B6',
+    categories: ['Lunch', 'Dinner', 'Snacks'],
+    cuisines: ['Indian'],
+    diets: ['Vegetarian', 'Vegan', 'Gluten Free'],
+    tags: ['Quick & Easy', 'Budget Friendly'],
+    nutrition: {
+      caloriesKcal: 180,
+      proteinG: 3.0,
+      carbohydratesG: 32.0,
+      fatG: 6.5,
+      fibreG: 4.2,
+    },
+    metadata: {
+      vitamins: 'Vitamin C, Potassium, Vitamin B6',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Boil potatoes until tender, peel and cut into bite-sized cubes.', durationMinutes: 10 },
+      { stepNumber: 2, instruction: 'Heat cooking oil in a pan over medium flame.', durationMinutes: 2 },
+      { stepNumber: 3, instruction: 'Add cumin seeds (jeera) and let them crackle and release nutty aroma.', durationMinutes: 1 },
+      { stepNumber: 4, instruction: 'Add finely chopped ginger and slit green chilies.', durationMinutes: 1 },
+      { stepNumber: 5, instruction: 'Toss in diced potatoes, turmeric powder, red chili powder, and salt.', durationMinutes: 2 },
+      { stepNumber: 6, instruction: 'Sauté on medium-high heat for 6-8 minutes until edges turn golden and crisp.', durationMinutes: 7 },
+      { stepNumber: 7, instruction: 'Sprinkle fresh coriander leaves and serve hot with poori or paratha.', durationMinutes: 1 },
+    ],
     ingredients: [
-      { name: 'Potato', quantity: '3 medium' },
-      { name: 'Cumin Seeds', quantity: '1.5 tsp' },
-      { name: 'Cooking Oil', quantity: '1.5 tbsp' },
-      { name: 'Ginger', quantity: '1 tsp' },
-      { name: 'Green Chili', quantity: '1 unit' },
-      { name: 'Salt', quantity: '1 tsp' },
-      { name: 'Turmeric Powder', quantity: '1/2 tsp' }
-    ]
+      { name: 'Potato', quantity: 3, unitSymbol: 'unit', preparationNote: 'boiled and diced' },
+      { name: 'Cumin Seeds', quantity: 1.5, unitSymbol: 'tsp' },
+      { name: 'Cooking Oil', quantity: 1.5, unitSymbol: 'tbsp' },
+      { name: 'Ginger', quantity: 1, unitSymbol: 'tsp', preparationNote: 'julienned' },
+      { name: 'Green Chili', quantity: 1, unitSymbol: 'unit', preparationNote: 'slit' },
+      { name: 'Salt', quantity: 1, unitSymbol: 'tsp' },
+      { name: 'Turmeric Powder', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Garlic Spinach',
-    category: 'Healthy',
-    cookingTime: 10,
-    difficulty: 'Easy',
-    instructions: '1. Wash spinach leaves thoroughly.\n2. Heat butter in a pan.\n3. Add plenty of minced garlic and sauté until fragrant.\n4. Toss in spinach leaves and sauté on high heat for 3-4 minutes until wilted.\n5. Season with salt and lemon juice.\n6. Serve hot.',
+    description: 'Fresh tender spinach sautéed with golden garlic, butter, sea salt, and a splash of lemon.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 5,
+    cookTimeMinutes: 10,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=600&auto=format&fit=crop&q=80',
-    calories: 90,
-    protein: 3.5,
-    carbs: 4.0,
-    fat: 7.0,
-    fiber: 2.8,
-    vitamins: 'Vitamin A, Vitamin K, Vitamin C, Iron, Calcium',
+    categories: ['Healthy', 'Dinner'],
+    cuisines: ['Continental'],
+    diets: ['Vegetarian', 'Keto', 'Gluten Free'],
+    tags: ['Quick & Easy', 'Healthy'],
+    nutrition: {
+      caloriesKcal: 90,
+      proteinG: 3.5,
+      carbohydratesG: 4.0,
+      fatG: 7.0,
+      fibreG: 2.8,
+    },
+    metadata: {
+      vitamins: 'Vitamin A, Vitamin K, Vitamin C, Iron, Calcium',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Thoroughly wash spinach leaves and drain excess water.', durationMinutes: 3 },
+      { stepNumber: 2, instruction: 'Melt butter in a wide skillet over medium heat.', durationMinutes: 1 },
+      { stepNumber: 3, instruction: 'Add sliced or minced garlic and sauté until fragrant and lightly golden.', durationMinutes: 2 },
+      { stepNumber: 4, instruction: 'Add the spinach leaves and toss quickly on high heat for 3-4 minutes until wilted.', durationMinutes: 4 },
+      { stepNumber: 5, instruction: 'Season with salt and a squeeze of fresh lemon juice.', durationMinutes: 1 },
+      { stepNumber: 6, instruction: 'Transfer to a serving plate and enjoy warm.', durationMinutes: 1 },
+    ],
     ingredients: [
-      { name: 'Spinach', quantity: '1 bunch' },
-      { name: 'Garlic', quantity: '2 tbsp' },
-      { name: 'Butter', quantity: '1 tbsp' },
-      { name: 'Lemon', quantity: '1/2 unit' },
-      { name: 'Salt', quantity: '1/2 tsp' }
-    ]
+      { name: 'Spinach', quantity: 1, unitSymbol: 'bunch', preparationNote: 'washed and trimmed' },
+      { name: 'Garlic', quantity: 2, unitSymbol: 'tbsp', preparationNote: 'sliced' },
+      { name: 'Butter', quantity: 1, unitSymbol: 'tbsp' },
+      { name: 'Lemon', quantity: 0.5, unitSymbol: 'unit', preparationNote: 'juiced' },
+      { name: 'Salt', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Paneer Bhurji',
-    category: 'Indian',
-    cookingTime: 15,
-    difficulty: 'Easy',
-    instructions: '1. Crumble the paneer.\n2. Heat butter in a pan and sauté chopped onions, ginger, and green chilies.\n3. Add tomatoes and cook until soft.\n4. Add turmeric, chili powder, garam masala, and salt.\n5. Toss in crumbled paneer and mix well.\n6. Cook for 3-4 minutes on low heat. Serve hot.',
+    description: 'Scrambled cottage cheese tossed with spiced onions, juicy tomatoes, and vibrant herbs.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 10,
+    cookTimeMinutes: 15,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80',
-    calories: 260,
-    protein: 14.0,
-    carbs: 5.0,
-    fat: 20.0,
-    fiber: 1.5,
-    vitamins: 'Calcium, Vitamin D, Vitamin A',
+    categories: ['Breakfast', 'Lunch', 'Dinner'],
+    cuisines: ['Indian'],
+    diets: ['Vegetarian', 'Gluten Free', 'High Protein'],
+    tags: ['Quick & Easy', 'High Protein'],
+    nutrition: {
+      caloriesKcal: 260,
+      proteinG: 14.0,
+      carbohydratesG: 5.0,
+      fatG: 20.0,
+      fibreG: 1.5,
+    },
+    metadata: {
+      vitamins: 'Calcium, Vitamin D, Vitamin A',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Crumble fresh paneer by hand and set aside.', durationMinutes: 3 },
+      { stepNumber: 2, instruction: 'Heat butter in a skillet; sauté chopped onions, ginger, and green chilies.', durationMinutes: 4 },
+      { stepNumber: 3, instruction: 'Add chopped tomatoes and cook until soft and pulpy.', durationMinutes: 3 },
+      { stepNumber: 4, instruction: 'Add turmeric, chili powder, garam masala, and salt.', durationMinutes: 1 },
+      { stepNumber: 5, instruction: 'Toss in crumbled paneer and gently fold together.', durationMinutes: 2 },
+      { stepNumber: 6, instruction: 'Cook on low heat for 3 minutes without overcooking to keep paneer moist. Serve hot.', durationMinutes: 3 },
+    ],
     ingredients: [
-      { name: 'Paneer', quantity: '150g' },
-      { name: 'Butter', quantity: '1.5 tbsp' },
-      { name: 'Onion', quantity: '1 medium' },
-      { name: 'Tomato', quantity: '1 medium' },
-      { name: 'Ginger', quantity: '1/2 tsp' },
-      { name: 'Green Chili', quantity: '1 unit' },
-      { name: 'Salt', quantity: '1/2 tsp' },
-      { name: 'Turmeric Powder', quantity: '1/4 tsp' }
-    ]
+      { name: 'Paneer', quantity: 150, unitSymbol: 'g', preparationNote: 'crumbled' },
+      { name: 'Butter', quantity: 1.5, unitSymbol: 'tbsp' },
+      { name: 'Onion', quantity: 1, unitSymbol: 'unit', preparationNote: 'finely chopped' },
+      { name: 'Tomato', quantity: 1, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Ginger', quantity: 0.5, unitSymbol: 'tsp', preparationNote: 'grated' },
+      { name: 'Green Chili', quantity: 1, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Salt', quantity: 0.5, unitSymbol: 'tsp' },
+      { name: 'Turmeric Powder', quantity: 0.25, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Egg Bhurji',
-    category: 'Indian',
-    cookingTime: 12,
-    difficulty: 'Easy',
-    instructions: '1. Whisk eggs in a bowl with a pinch of salt.\n2. Heat butter in a pan; add chopped onions and green chilies, and sauté.\n3. Add tomatoes and cook until soft.\n4. Pour in the whisked eggs and stir continuously on low heat to scramble them.\n5. Add salt, turmeric, and chili powder.\n6. Cook until eggs are set and serve hot.',
+    description: 'Mumbai-style spicy scrambled eggs cooked with sautéed onions, tomatoes, and ground spices.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 5,
+    cookTimeMinutes: 12,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=600&auto=format&fit=crop&q=80',
-    calories: 210,
-    protein: 13.0,
-    carbs: 3.5,
-    fat: 16.0,
-    fiber: 0.8,
-    vitamins: 'Vitamin D, Vitamin B12, Riboflavin, Choline',
+    categories: ['Breakfast', 'Dinner'],
+    cuisines: ['Indian'],
+    diets: ['Non-Vegetarian', 'Keto', 'Gluten Free'],
+    tags: ['Quick & Easy', 'High Protein'],
+    nutrition: {
+      caloriesKcal: 210,
+      proteinG: 13.0,
+      carbohydratesG: 3.5,
+      fatG: 16.0,
+      fibreG: 0.8,
+    },
+    metadata: {
+      vitamins: 'Vitamin D, Vitamin B12, Riboflavin, Choline',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Crack eggs into a bowl, add a pinch of salt, and whisk lightly.', durationMinutes: 2 },
+      { stepNumber: 2, instruction: 'Heat butter in a pan; sauté chopped onions and green chilies until soft.', durationMinutes: 3 },
+      { stepNumber: 3, instruction: 'Add diced tomatoes and cook until juicy.', durationMinutes: 2 },
+      { stepNumber: 4, instruction: 'Pour in whisked eggs and gently stir continuously on medium-low heat.', durationMinutes: 3 },
+      { stepNumber: 5, instruction: 'Sprinkle salt, turmeric, and chili powder into the soft curd.', durationMinutes: 1 },
+      { stepNumber: 6, instruction: 'Cook until eggs are softly scrambled and set. Serve immediately with warm toast.', durationMinutes: 2 },
+    ],
     ingredients: [
-      { name: 'Egg', quantity: '3 units' },
-      { name: 'Butter', quantity: '1 tbsp' },
-      { name: 'Onion', quantity: '1 medium' },
-      { name: 'Tomato', quantity: '1 medium' },
-      { name: 'Green Chili', quantity: '1 unit' },
-      { name: 'Salt', quantity: '1/2 tsp' },
-      { name: 'Chili Powder', quantity: '1/2 tsp' }
-    ]
+      { name: 'Egg', quantity: 3, unitSymbol: 'unit', preparationNote: 'whisked' },
+      { name: 'Butter', quantity: 1, unitSymbol: 'tbsp' },
+      { name: 'Onion', quantity: 1, unitSymbol: 'unit', preparationNote: 'finely chopped' },
+      { name: 'Tomato', quantity: 1, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Green Chili', quantity: 1, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Salt', quantity: 0.5, unitSymbol: 'tsp' },
+      { name: 'Chili Powder', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Butter Chicken',
-    category: 'Indian',
-    cookingTime: 40,
-    difficulty: 'Hard',
-    instructions: '1. Marinate chicken with ginger-garlic paste, salt, yogurt, and spices.\n2. Grill or pan-fry chicken until cooked.\n3. In a separate pan, melt butter and sauté onions and tomatoes.\n4. Blend the onion-tomato mixture to make a smooth gravy.\n5. Heat gravy, add cream, spices, and chicken.\n6. Simmer for 10 minutes. Serve hot.',
+    description: 'Iconic North Indian chicken curry marinated in spices and cooked in a silky, creamy tomato makhani gravy.',
+    difficulty: RecipeDifficulty.HARD,
+    prepTimeMinutes: 20,
+    cookTimeMinutes: 40,
+    servings: 4,
     imageUrl: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=600&auto=format&fit=crop&q=80',
-    calories: 450,
-    protein: 28.0,
-    carbs: 10.0,
-    fat: 33.0,
-    fiber: 1.5,
-    vitamins: 'Vitamin A, Calcium, Niacin, Vitamin B6',
+    categories: ['Lunch', 'Dinner'],
+    cuisines: ['Indian'],
+    diets: ['Non-Vegetarian', 'Gluten Free'],
+    tags: ['Party Special', 'Comfort Food'],
+    nutrition: {
+      caloriesKcal: 450,
+      proteinG: 28.0,
+      carbohydratesG: 10.0,
+      fatG: 33.0,
+      fibreG: 1.5,
+    },
+    metadata: {
+      vitamins: 'Vitamin A, Calcium, Niacin, Vitamin B6',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Marinate chicken pieces with ginger-garlic paste, yogurt, and spices for 20 minutes.', durationMinutes: 20 },
+      { stepNumber: 2, instruction: 'Pan-fry or sear the chicken in a hot pan until charred and mostly cooked through.', durationMinutes: 10 },
+      { stepNumber: 3, instruction: 'In a separate saucepot, melt butter and simmer onions, garlic, and fresh tomatoes.', durationMinutes: 10 },
+      { stepNumber: 4, instruction: 'Blend the tomato-onion base into a silky-smooth gravy and pass through a sieve.', durationMinutes: 5 },
+      { stepNumber: 5, instruction: 'Simmer the velvety gravy, add heavy cream, butter, and cooked chicken pieces.', durationMinutes: 10 },
+      { stepNumber: 6, instruction: 'Finish with dried fenugreek leaves (kasoori methi) and serve hot.', durationMinutes: 5 },
+    ],
     ingredients: [
-      { name: 'Chicken', quantity: '300g' },
-      { name: 'Butter', quantity: '3 tbsp' },
-      { name: 'Tomato', quantity: '3 medium' },
-      { name: 'Onion', quantity: '1 medium' },
-      { name: 'Cream', quantity: '3 tbsp' },
-      { name: 'Ginger', quantity: '1.5 tsp' },
-      { name: 'Garlic', quantity: '1.5 tsp' },
-      { name: 'Salt', quantity: '1 tsp' },
-      { name: 'Chili Powder', quantity: '1.5 tsp' }
-    ]
+      { name: 'Chicken', quantity: 300, unitSymbol: 'g', preparationNote: 'boneless pieces' },
+      { name: 'Butter', quantity: 3, unitSymbol: 'tbsp' },
+      { name: 'Tomato', quantity: 3, unitSymbol: 'unit', preparationNote: 'ripe, pureed' },
+      { name: 'Onion', quantity: 1, unitSymbol: 'unit', preparationNote: 'chopped' },
+      { name: 'Cream', quantity: 3, unitSymbol: 'tbsp' },
+      { name: 'Ginger', quantity: 1.5, unitSymbol: 'tsp', preparationNote: 'paste' },
+      { name: 'Garlic', quantity: 1.5, unitSymbol: 'tsp', preparationNote: 'paste' },
+      { name: 'Salt', quantity: 1, unitSymbol: 'tsp' },
+      { name: 'Chili Powder', quantity: 1.5, unitSymbol: 'tsp' },
+    ],
   },
   {
     name: 'Vegetable Salad',
-    category: 'Healthy',
-    cookingTime: 8,
-    difficulty: 'Easy',
-    instructions: '1. Wash and chop cucumber, tomatoes, and carrots into bite-sized pieces.\n2. Toss them in a mixing bowl.\n3. Add freshly squeezed lemon juice.\n4. Season with salt and pepper.\n5. Mix well and serve immediately.',
+    description: 'Crisp garden vegetable salad featuring crunchy cucumbers, carrots, and sweet tomatoes with a citrus vinaigrette.',
+    difficulty: RecipeDifficulty.EASY,
+    prepTimeMinutes: 8,
+    cookTimeMinutes: 8,
+    servings: 2,
     imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&auto=format&fit=crop&q=80',
-    calories: 60,
-    protein: 1.5,
-    carbs: 12.0,
-    fat: 0.5,
-    fiber: 3.5,
-    vitamins: 'Vitamin C, Vitamin A, Vitamin K, Potassium',
+    categories: ['Healthy', 'Snacks'],
+    cuisines: ['Global'],
+    diets: ['Vegetarian', 'Vegan', 'Gluten Free', 'Keto'],
+    tags: ['Quick & Easy', 'Healthy'],
+    nutrition: {
+      caloriesKcal: 60,
+      proteinG: 1.5,
+      carbohydratesG: 12.0,
+      fatG: 0.5,
+      fibreG: 3.5,
+    },
+    metadata: {
+      vitamins: 'Vitamin C, Vitamin A, Vitamin K, Potassium',
+    },
+    steps: [
+      { stepNumber: 1, instruction: 'Wash all vegetables thoroughly in clean cold water.', durationMinutes: 2 },
+      { stepNumber: 2, instruction: 'Dice cucumbers, carrots, and tomatoes into bite-sized uniform pieces.', durationMinutes: 4 },
+      { stepNumber: 3, instruction: 'Toss vegetables together in a salad mixing bowl.', durationMinutes: 1 },
+      { stepNumber: 4, instruction: 'Drizzle freshly squeezed lemon juice over the top.', durationMinutes: 1 },
+      { stepNumber: 5, instruction: 'Season with sea salt and cracked black pepper; mix gently and serve fresh.', durationMinutes: 1 },
+    ],
     ingredients: [
-      { name: 'Cucumber', quantity: '1 unit' },
-      { name: 'Tomato', quantity: '1 medium' },
-      { name: 'Carrot', quantity: '1 medium' },
-      { name: 'Lemon', quantity: '1/2 unit' },
-      { name: 'Salt', quantity: '1/2 tsp' }
-    ]
-  }
+      { name: 'Cucumber', quantity: 1, unitSymbol: 'unit', preparationNote: 'diced' },
+      { name: 'Tomato', quantity: 1, unitSymbol: 'unit', preparationNote: 'diced' },
+      { name: 'Carrot', quantity: 1, unitSymbol: 'unit', preparationNote: 'sliced' },
+      { name: 'Lemon', quantity: 0.5, unitSymbol: 'unit', preparationNote: 'juiced' },
+      { name: 'Salt', quantity: 0.5, unitSymbol: 'tsp' },
+    ],
+  },
 ];
 
+// ---------------------------------------------------------------------------
+// MAIN SEEDING RUNNER
+// ---------------------------------------------------------------------------
 async function main() {
-  console.log('Start seeding...');
+  console.log('====================================================');
+  console.log('🌱 WhatToCook Database Seeding Initialized');
+  console.log('====================================================');
 
-  // 1. Seed Ingredients
-  const ingredientMap: Record<string, number> = {};
-  for (const ing of INGREDIENTS) {
-    const dbIng = await prisma.ingredient.upsert({
-      where: { ingredientName: ing.name },
-      update: { category: ing.category },
-      create: { ingredientName: ing.name, category: ing.category }
+  // 1. Seed Units
+  console.log('\n[1/7] Seeding Measurement Units...');
+  const unitMap = new Map<string, string>();
+  for (const unit of UNITS) {
+    const record = await prisma.unit.upsert({
+      where: { name: unit.name },
+      update: { symbol: unit.symbol },
+      create: { name: unit.name, symbol: unit.symbol },
     });
-    ingredientMap[ing.name] = dbIng.id;
+    unitMap.set(unit.name, record.id);
+    if (unit.symbol) {
+      unitMap.set(unit.symbol, record.id);
+    }
   }
-  console.log(`Seeded ${INGREDIENTS.length} ingredients.`);
+  console.log(`  ✓ Seeded ${UNITS.length} units of measurement.`);
 
-  // 2. Seed Recipes & recipe-ingredient mappings
-  for (const r of RECIPES) {
-    const dbRecipe = await prisma.recipe.upsert({
-      where: { recipeName: r.name },
+  // 2. Seed Categories
+  console.log('\n[2/7] Seeding Categories...');
+  const categoryMap = new Map<string, string>();
+  for (const cat of CATEGORIES) {
+    const slug = slugify(cat.name);
+    const record = await prisma.category.upsert({
+      where: { name: cat.name },
       update: {
-        category: r.category,
-        cookingTime: r.cookingTime,
-        difficultyLevel: r.difficulty,
-        instructions: r.instructions,
-        imageUrl: r.imageUrl,
-        calories: r.calories,
-        protein: r.protein,
-        carbs: r.carbs,
-        fat: r.fat,
-        fiber: r.fiber,
-        vitamins: r.vitamins
+        slug,
+        description: cat.description,
+        sortOrder: cat.sortOrder,
       },
       create: {
-        recipeName: r.name,
-        category: r.category,
-        cookingTime: r.cookingTime,
-        difficultyLevel: r.difficulty,
-        instructions: r.instructions,
-        imageUrl: r.imageUrl,
-        calories: r.calories,
-        protein: r.protein,
-        carbs: r.carbs,
-        fat: r.fat,
-        fiber: r.fiber,
-        vitamins: r.vitamins
+        name: cat.name,
+        slug,
+        description: cat.description,
+        sortOrder: cat.sortOrder,
+        isActive: true,
+      },
+    });
+    categoryMap.set(cat.name, record.id);
+  }
+  console.log(`  ✓ Seeded ${CATEGORIES.length} categories.`);
+
+  // 3. Seed Cuisines
+  console.log('\n[3/7] Seeding Cuisines...');
+  const cuisineMap = new Map<string, string>();
+  for (const cuisine of CUISINES) {
+    const slug = slugify(cuisine.name);
+    const record = await prisma.cuisine.upsert({
+      where: { name: cuisine.name },
+      update: {
+        slug,
+        description: cuisine.description,
+      },
+      create: {
+        name: cuisine.name,
+        slug,
+        description: cuisine.description,
+        isActive: true,
+      },
+    });
+    cuisineMap.set(cuisine.name, record.id);
+  }
+  console.log(`  ✓ Seeded ${CUISINES.length} cuisines.`);
+
+  // 4. Seed Diets & Allergens
+  console.log('\n[4/7] Seeding Diets & Allergens...');
+  const dietMap = new Map<string, string>();
+  for (const diet of DIETS) {
+    const slug = slugify(diet.name);
+    const record = await prisma.diet.upsert({
+      where: { name: diet.name },
+      update: {
+        slug,
+        description: diet.description,
+      },
+      create: {
+        name: diet.name,
+        slug,
+        description: diet.description,
+        isActive: true,
+      },
+    });
+    dietMap.set(diet.name, record.id);
+  }
+
+  const allergenMap = new Map<string, string>();
+  for (const allergen of ALLERGENS) {
+    const slug = slugify(allergen.name);
+    const record = await prisma.allergen.upsert({
+      where: { name: allergen.name },
+      update: {
+        slug,
+        description: allergen.description,
+      },
+      create: {
+        name: allergen.name,
+        slug,
+        description: allergen.description,
+      },
+    });
+    allergenMap.set(allergen.name, record.id);
+  }
+  console.log(`  ✓ Seeded ${DIETS.length} diets and ${ALLERGENS.length} allergens.`);
+
+  // 5. Seed Tags
+  console.log('\n[5/7] Seeding Tags...');
+  const tagMap = new Map<string, string>();
+  for (const tag of TAGS) {
+    const slug = slugify(tag.name);
+    const record = await prisma.tag.upsert({
+      where: { name: tag.name },
+      update: {
+        slug,
+        description: tag.description,
+      },
+      create: {
+        name: tag.name,
+        slug,
+        description: tag.description,
+        isActive: true,
+      },
+    });
+    tagMap.set(tag.name, record.id);
+  }
+  console.log(`  ✓ Seeded ${TAGS.length} tags.`);
+
+  // 6. Seed Ingredients and link allergens
+  console.log('\n[6/7] Seeding Ingredients & Allergen Relations...');
+  const ingredientMap = new Map<string, string>();
+  for (const ing of INGREDIENTS) {
+    const slug = slugify(ing.name);
+    const record = await prisma.ingredient.upsert({
+      where: { name: ing.name },
+      update: { slug },
+      create: { name: ing.name, slug },
+    });
+    ingredientMap.set(ing.name, record.id);
+
+    // Link allergens if specified
+    if (ing.allergens && ing.allergens.length > 0) {
+      for (const allergenName of ing.allergens) {
+        const allergenId = allergenMap.get(allergenName);
+        if (allergenId) {
+          await prisma.ingredientAllergen.upsert({
+            where: {
+              ingredientId_allergenId: {
+                ingredientId: record.id,
+                allergenId,
+              },
+            },
+            update: {},
+            create: {
+              ingredientId: record.id,
+              allergenId,
+            },
+          });
+        }
       }
+    }
+  }
+  console.log(`  ✓ Seeded ${INGREDIENTS.length} master ingredients with allergen mappings.`);
+
+  // 7. Seed Recipes, Steps, Nutrition, Ingredients & Taxonomy Mappings
+  console.log('\n[7/7] Seeding Recipes, Steps, Nutrition, and Mappings...');
+  for (const r of RECIPES) {
+    const recipeSlug = slugify(r.name);
+
+    // Upsert base recipe
+    const dbRecipe = await prisma.recipe.upsert({
+      where: { slug: recipeSlug },
+      update: {
+        name: r.name,
+        description: r.description,
+        imageUrl: r.imageUrl,
+        difficulty: r.difficulty,
+        prepTimeMinutes: r.prepTimeMinutes,
+        cookTimeMinutes: r.cookTimeMinutes,
+        servings: r.servings,
+        status: RecipeStatus.PUBLISHED,
+        publishedAt: new Date(),
+        metadata: r.metadata,
+      },
+      create: {
+        name: r.name,
+        slug: recipeSlug,
+        description: r.description,
+        imageUrl: r.imageUrl,
+        difficulty: r.difficulty,
+        prepTimeMinutes: r.prepTimeMinutes,
+        cookTimeMinutes: r.cookTimeMinutes,
+        servings: r.servings,
+        status: RecipeStatus.PUBLISHED,
+        publishedAt: new Date(),
+        metadata: r.metadata,
+      },
     });
 
-    // Create recipe-ingredient relations
-    for (const ri of r.ingredients) {
-      const ingredientId = ingredientMap[ri.name];
+    // Seed Nutrition (1-to-1)
+    await prisma.recipeNutrition.upsert({
+      where: { recipeId: dbRecipe.id },
+      update: {
+        caloriesKcal: r.nutrition.caloriesKcal,
+        proteinG: r.nutrition.proteinG,
+        carbohydratesG: r.nutrition.carbohydratesG,
+        fatG: r.nutrition.fatG,
+        fibreG: r.nutrition.fibreG,
+      },
+      create: {
+        recipeId: dbRecipe.id,
+        caloriesKcal: r.nutrition.caloriesKcal,
+        proteinG: r.nutrition.proteinG,
+        carbohydratesG: r.nutrition.carbohydratesG,
+        fatG: r.nutrition.fatG,
+        fibreG: r.nutrition.fibreG,
+      },
+    });
+
+    // Re-seed Steps cleanly
+    await prisma.recipeStep.deleteMany({
+      where: { recipeId: dbRecipe.id },
+    });
+    for (const step of r.steps) {
+      await prisma.recipeStep.create({
+        data: {
+          recipeId: dbRecipe.id,
+          stepNumber: step.stepNumber,
+          instruction: step.instruction,
+          durationMinutes: step.durationMinutes,
+        },
+      });
+    }
+
+    // Re-seed Ingredients cleanly
+    await prisma.recipeIngredient.deleteMany({
+      where: { recipeId: dbRecipe.id },
+    });
+    let sortOrder = 1;
+    for (const ing of r.ingredients) {
+      const ingredientId = ingredientMap.get(ing.name);
+      const unitId = unitMap.get(ing.unitSymbol) || null;
+
       if (ingredientId) {
-        await prisma.recipeIngredient.upsert({
-          where: {
-            recipeId_ingredientId: {
-              recipeId: dbRecipe.id,
-              ingredientId: ingredientId
-            }
+        await prisma.recipeIngredient.create({
+          data: {
+            recipeId: dbRecipe.id,
+            ingredientId,
+            unitId,
+            quantity: ing.quantity,
+            preparationNote: ing.preparationNote,
+            sortOrder: sortOrder++,
           },
-          update: { quantity: ri.quantity },
+        });
+      }
+    }
+
+    // Seed Recipe Categories
+    for (const catName of r.categories) {
+      const categoryId = categoryMap.get(catName);
+      if (categoryId) {
+        await prisma.recipeCategory.upsert({
+          where: {
+            recipeId_categoryId: {
+              recipeId: dbRecipe.id,
+              categoryId,
+            },
+          },
+          update: {},
           create: {
             recipeId: dbRecipe.id,
-            ingredientId: ingredientId,
-            quantity: ri.quantity
-          }
+            categoryId,
+          },
+        });
+      }
+    }
+
+    // Seed Recipe Cuisines
+    for (const cuisineName of r.cuisines) {
+      const cuisineId = cuisineMap.get(cuisineName);
+      if (cuisineId) {
+        await prisma.recipeCuisine.upsert({
+          where: {
+            recipeId_cuisineId: {
+              recipeId: dbRecipe.id,
+              cuisineId,
+            },
+          },
+          update: {},
+          create: {
+            recipeId: dbRecipe.id,
+            cuisineId,
+          },
+        });
+      }
+    }
+
+    // Seed Recipe Diets
+    for (const dietName of r.diets) {
+      const dietId = dietMap.get(dietName);
+      if (dietId) {
+        await prisma.recipeDiet.upsert({
+          where: {
+            recipeId_dietId: {
+              recipeId: dbRecipe.id,
+              dietId,
+            },
+          },
+          update: {},
+          create: {
+            recipeId: dbRecipe.id,
+            dietId,
+          },
+        });
+      }
+    }
+
+    // Seed Recipe Tags
+    for (const tagName of r.tags) {
+      const tagId = tagMap.get(tagName);
+      if (tagId) {
+        await prisma.recipeTag.upsert({
+          where: {
+            recipeId_tagId: {
+              recipeId: dbRecipe.id,
+              tagId,
+            },
+          },
+          update: {},
+          create: {
+            recipeId: dbRecipe.id,
+            tagId,
+          },
         });
       }
     }
   }
-  console.log(`Seeded ${RECIPES.length} recipes and mappings.`);
+  console.log(`  ✓ Seeded ${RECIPES.length} complete recipes with steps, nutrition, ingredients & taxonomy.`);
 
-
-  console.log('Seeding finished.');
+  console.log('\n====================================================');
+  console.log('✨ All Database Seeding Completed Successfully!');
+  console.log('====================================================\n');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('\n❌ Seeding Error:', e);
     process.exit(1);
   })
   .finally(async () => {

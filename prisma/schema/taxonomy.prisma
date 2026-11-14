@@ -1,0 +1,99 @@
+// ============================================================
+// TAXONOMIES & CLASSIFICATIONS
+// Categories, Cuisines, Tags, Diets, and Allergens
+// ============================================================
+
+model Category {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+  imageUrl    String? @map("image_url") @db.Text
+
+  isActive  Boolean @default(true) @map("is_active")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  recipes         RecipeCategory[]
+  userPreferences UserPreferredCategory[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive])
+  @@map("categories")
+}
+
+model Cuisine {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+  imageUrl    String? @map("image_url") @db.Text
+
+  isActive Boolean @default(true) @map("is_active")
+
+  recipes         RecipeCuisine[]
+  userPreferences UserPreferredCuisine[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive])
+  @@map("cuisines")
+}
+
+model Tag {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+
+  isActive Boolean @default(true) @map("is_active")
+
+  recipes RecipeTag[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive])
+  @@map("tags")
+}
+
+model Diet {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+
+  isActive Boolean @default(true) @map("is_active")
+
+  recipes RecipeDiet[]
+  users   UserDiet[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive])
+  @@map("diets")
+}
+
+model Allergen {
+  id String @id @default(uuid()) @db.Uuid
+
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+
+  ingredients IngredientAllergen[]
+  users       UserAllergen[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("allergens")
+}
+

@@ -1,0 +1,53 @@
+// ============================================================
+// MEAL PLANNER & GROCERY LIST
+// ============================================================
+
+model MealPlan {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId   String @map("user_id") @db.VarChar(128)
+  recipeId String @map("recipe_id") @db.Uuid
+
+  mealType MealType @map("meal_type")
+  mealDate DateTime @map("meal_date") @db.Date
+
+  servings Int?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([userId, recipeId, mealDate, mealType])
+  @@index([userId, mealDate])
+  @@index([recipeId])
+  @@map("meal_plans")
+}
+
+model GroceryListItem {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId       String  @map("user_id") @db.VarChar(128)
+  ingredientId String? @map("ingredient_id") @db.Uuid
+  unitId       String? @map("unit_id") @db.Uuid
+
+  // Allows manually entered grocery items
+  customName String? @map("custom_name") @db.VarChar(150)
+
+  quantity Decimal? @db.Decimal(10, 3)
+
+  status GroceryItemStatus @default(PENDING)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+  unit       Unit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([userId, status])
+  @@index([ingredientId])
+  @@map("grocery_list_items")
+}
+

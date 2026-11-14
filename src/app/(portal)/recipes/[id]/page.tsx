@@ -29,7 +29,7 @@ interface IngredientDetail {
 }
 
 interface RecipeDetail {
-  recipe_id: number;
+  recipe_id: string | number;
   recipe_name: string;
   category: string;
   cooking_time: number;
@@ -48,8 +48,7 @@ interface RecipeDetail {
 
 export default function RecipeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
-  const recipeIdStr = resolvedParams.id;
-  const recipeId = parseInt(recipeIdStr, 10);
+  const recipeId = resolvedParams.id;
   
   const router = useRouter();
   const searchParams = useSearchParams();

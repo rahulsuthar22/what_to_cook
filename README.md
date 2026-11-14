@@ -141,3 +141,16 @@ Open your browser and navigate to **[http://localhost:3000](http://localhost:300
 ### 5. Admin Control Center
 - **Location:** `src/app/(portal)/admin/page.tsx`
 - **Details:** Shows database summary statistics (Total Users, Recipes, Meal Plans), identifies the most popular recipes and frequently used ingredients, and features a recipe creation form to add new meals directly to the system.
+
+
+| File | Domain & Models Included | Purpose |
+| --- | --- | --- |
+| base.prisma | `generator client`, `datasource db` | Core database provider and client generator configurations |
+| enums.prisma | `RecipeStatus`, `RecipeDifficulty`, `RecipeInteractionType`, `InteractionSource`, `MealType`, `GroceryItemStatus` | Centralized system enums |
+| user.prisma | `User`, `UserDiet`, `UserAllergen`, `UserDislikedIngredient`, `UserPreferredCuisine`, `UserPreferredCategory` | User accounts, profiles, and explicit user preference matrices |
+| admin.prisma | `Admin` | System administrators and portal roles |
+| recipe.prisma | `Recipe`, `RecipeStep`, `RecipeNutrition`, `RecipeIngredient`, `RecipeCategory`, `RecipeCuisine`, `RecipeTag`, `RecipeDiet` | Core recipe definitions, nutritional breakdown, steps, and relation join tables |
+| ingredient.prisma | `Ingredient`, `IngredientAllergen`, `Unit` | Master ingredient catalog, measurement units, and allergen associations |
+| taxonomy.prisma | `Category`, `Cuisine`, `Tag`, `Diet`, `Allergen` | Taxonomies, meal categories, cuisines, and classifications |
+| interaction.prisma | `RecipeInteraction`, `RecipeFavourite`, `RecipeReview` | User behavioural analytics, recommendations tracking, and reviews |
+| planner.prisma | `MealPlan`, `GroceryListItem` | Meal planning schedules and pantry/grocery checklist items |

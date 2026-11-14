@@ -1,0 +1,104 @@
+// ============================================================
+// USER & USER PREFERENCES
+// ============================================================
+
+model User {
+  id           String  @id @db.VarChar(128)
+  fullName     String  @map("full_name") @db.VarChar(100)
+  email        String  @unique @db.VarChar(254)
+  mobileNumber String? @map("mobile_number") @db.VarChar(20)
+  passwordHash String? @map("password_hash") @db.VarChar(255)
+  avatarUrl    String? @map("avatar_url") @db.Text
+
+  // Explicit recommendation preferences
+  diets               UserDiet[]
+  allergens           UserAllergen[]
+  dislikedIngredients UserDislikedIngredient[]
+  preferredCuisines   UserPreferredCuisine[]
+  preferredCategories UserPreferredCategory[]
+
+  // User behaviour
+  interactions RecipeInteraction[]
+  favourites   RecipeFavourite[]
+  reviews      RecipeReview[]
+
+  // Application features
+  mealPlans        MealPlan[]
+  groceryListItems GroceryListItem[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("users")
+}
+
+model UserDiet {
+  userId String @map("user_id") @db.VarChar(128)
+  dietId String @map("diet_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  diet Diet @relation(fields: [dietId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, dietId])
+  @@index([dietId])
+  @@map("user_diets")
+}
+
+model UserAllergen {
+  userId     String @map("user_id") @db.VarChar(128)
+  allergenId String @map("allergen_id") @db.Uuid
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allergen Allergen @relation(fields: [allergenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, allergenId])
+  @@index([allergenId])
+  @@map("user_allergens")
+}
+
+model UserDislikedIngredient {
+  userId       String @map("user_id") @db.VarChar(128)
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, ingredientId])
+  @@index([ingredientId])
+  @@map("user_disliked_ingredients")
+}
+
+model UserPreferredCuisine {
+  userId    String @map("user_id") @db.VarChar(128)
+  cuisineId String @map("cuisine_id") @db.Uuid
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cuisine Cuisine @relation(fields: [cuisineId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, cuisineId])
+  @@index([cuisineId])
+  @@map("user_preferred_cuisines")
+}
+
+model UserPreferredCategory {
+  userId     String @map("user_id") @db.VarChar(128)
+  categoryId String @map("category_id") @db.Uuid
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, categoryId])
+  @@index([categoryId])
+  @@map("user_preferred_categories")
+}
+

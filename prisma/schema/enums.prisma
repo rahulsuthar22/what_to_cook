@@ -1,0 +1,51 @@
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum RecipeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum RecipeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum RecipeInteractionType {
+  VIEW
+  CLICK
+  FAVOURITE
+  UNFAVOURITE
+  COOKED
+  SHARE
+  RATE
+}
+
+enum InteractionSource {
+  HOME
+  SEARCH
+  RECOMMENDATION
+  CATEGORY
+  CUISINE
+  FAVOURITES
+  MEAL_PLAN
+  TRENDING
+  OTHER
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+enum GroceryItemStatus {
+  PENDING
+  PURCHASED
+  REMOVED
+}
+

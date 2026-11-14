@@ -1,0 +1,1447 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "WhatToCook REST API",
+    "description": "Comprehensive OpenAPI 3.1 specification for the WhatToCook culinary planning, smart recommendation, and meal management platform.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "WhatToCook Engineering Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Recipes",
+      "description": "Catalogue browsing, recipe creation, detailed recipe instructions, and deletion"
+    },
+    {
+      "name": "Recommendations",
+      "description": "Pantry-based ingredient scoring algorithm and recommendation engine"
+    },
+    {
+      "name": "Recipe Social",
+      "description": "User reviews, ratings, and recipe favorites/likes"
+    },
+    {
+      "name": "Meal Planner",
+      "description": "Scheduling recipes across breakfast, lunch, dinner, and snack calendar slots"
+    },
+    {
+      "name": "Grocery List",
+      "description": "Shopping list management and automated generation from scheduled meal plans"
+    },
+    {
+      "name": "Admin & Analytics",
+      "description": "Administrative metrics, platform statistics, and overview counts"
+    },
+    {
+      "name": "Authentication",
+      "description": "User account synchronization and native OAuth credential verification"
+    }
+  ],
+  "paths": {
+    "/api/recipes": {
+      "get": {
+        "tags": ["Recipes"],
+        "summary": "List recipes with filtering and pagination",
+        "description": "Retrieves recipes formatted for frontend components with support for category matching, difficulty level filtering, and pagination.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Filter recipes by taxonomy category name (e.g. 'Lunch', 'Breakfast', 'Dinner', 'Healthy')",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "Lunch"
+            }
+          },
+          {
+            "name": "difficulty",
+            "in": "query",
+            "description": "Filter by recipe difficulty level",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["EASY", "MEDIUM", "HARD", "Easy", "Medium", "Hard"],
+              "example": "Easy"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of records to return",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "example": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of records to skip for pagination",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "example": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved recipe list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "recipes": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/RecipeItem" }
+                    }
+                  },
+                  "required": ["success", "recipes"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Recipes"],
+        "summary": "Create a new recipe (Admin)",
+        "description": "Creates a new recipe atomically including steps, nutritional details, and ingredient mappings within a database transaction.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRecipeInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recipe created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "recipe": { "$ref": "#/components/schemas/RecipeItem" }
+                  },
+                  "required": ["success", "recipe"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (e.g., missing recipe name or instructions)",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes/{id}": {
+      "get": {
+        "tags": ["Recipes"],
+        "summary": "Get recipe details by ID",
+        "description": "Fetches a full recipe detail view including step-by-step instructions, nutrition breakdown, and required ingredient quantities.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique UUID of the recipe",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe details found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "recipe": { "$ref": "#/components/schemas/RecipeDetail" }
+                  },
+                  "required": ["success", "recipe"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid recipe ID provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Recipe not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Recipes"],
+        "summary": "Delete a recipe (Admin)",
+        "description": "Removes a recipe and cascades associated ingredient linkages, step entries, and nutritional rows.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique UUID of the recipe to delete",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Recipe deleted successfully" },
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "recipe_id": { "type": "string", "format": "uuid" },
+                        "recipe_name": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid recipe ID provided",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Recipe not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes/{id}/likes": {
+      "get": {
+        "tags": ["Recipe Social"],
+        "summary": "Get recipe likes count and current user like status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the recipe",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "description": "Firebase UID or database user ID to check if currently liked",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Likes status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "likesCount": { "type": "integer", "example": 14 },
+                    "liked": { "type": "boolean", "example": false }
+                  },
+                  "required": ["success", "likesCount", "liked"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid recipe ID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Recipe Social"],
+        "summary": "Toggle recipe like/favourite",
+        "description": "Toggles a recipe like for the specified user (adds if not liked, removes if already liked).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the recipe",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "usr_abc123" }
+                },
+                "required": ["user_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Like toggled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "liked": { "type": "boolean", "example": true },
+                    "likesCount": { "type": "integer", "example": 15 }
+                  },
+                  "required": ["success", "liked", "likesCount"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing user_id or invalid recipe ID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes/{id}/comments": {
+      "get": {
+        "tags": ["Recipe Social"],
+        "summary": "List comments and reviews for a recipe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the recipe",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of recipe reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "comments": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CommentItem" }
+                    }
+                  },
+                  "required": ["success", "comments"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid recipe ID",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Recipe Social"],
+        "summary": "Post a new review/comment on a recipe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the recipe",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "usr_abc123" },
+                  "comment": { "type": "string", "example": "Tasted absolutely delicious! I added an extra dash of garlic." }
+                },
+                "required": ["user_id", "comment"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment posted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "comment": { "$ref": "#/components/schemas/CommentItem" }
+                  },
+                  "required": ["success", "comment"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes/recommend": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Pantry ingredient scoring & recipe recommendations",
+        "description": "Executes PostgreSQL raw SQL aggregate scoring to determine match percentages and missing ingredients for recipes given a user's pantry contents.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ingredients": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "example": ["paneer", "tomato", "butter"]
+                  }
+                },
+                "required": ["ingredients"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scored and sorted recipe recommendations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "recommendations": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/RecommendedRecipe" }
+                    }
+                  },
+                  "required": ["success", "recommendations"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty or invalid ingredients array",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error during recommendation aggregation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/planner": {
+      "get": {
+        "tags": ["Meal Planner"],
+        "summary": "Retrieve user meal plans",
+        "description": "Returns scheduled meal plans sorted by date and chronological meal slot (Breakfast, Lunch, Dinner, Snack).",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "Target user ID",
+            "schema": { "type": "string", "example": "usr_abc123" }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "description": "Filter start boundary (ISO date string)",
+            "schema": { "type": "string", "format": "date", "example": "2026-11-14" }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "description": "Filter end boundary (ISO date string)",
+            "schema": { "type": "string", "format": "date", "example": "2026-11-21" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled meal plans list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "mealPlans": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/MealPlanItem" }
+                    }
+                  },
+                  "required": ["success", "mealPlans"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing user_id parameter",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Meal Planner"],
+        "summary": "Schedule a recipe to the meal plan",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "usr_abc123" },
+                  "recipe_id": { "type": "string", "format": "uuid", "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+                  "meal_type": { "type": "string", "enum": ["Breakfast", "Lunch", "Dinner", "Snack"], "example": "Dinner" },
+                  "meal_date": { "type": "string", "format": "date", "example": "2026-11-16" }
+                },
+                "required": ["user_id", "recipe_id", "meal_type", "meal_date"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Meal plan entry added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "mealPlan": { "$ref": "#/components/schemas/MealPlanItem" }
+                  },
+                  "required": ["success", "mealPlan"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Meal Planner"],
+        "summary": "Remove a meal plan entry",
+        "parameters": [
+          {
+            "name": "meal_plan_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID of the meal plan row to delete",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meal plan removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Meal plan removed" },
+                    "deletedId": { "type": "string", "format": "uuid" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing meal_plan_id",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Meal plan entry not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/grocery": {
+      "get": {
+        "tags": ["Grocery List"],
+        "summary": "Get user grocery list with recipe associations",
+        "description": "Fetches active grocery items and joins cross-referenced planned recipes indicating where each ingredient is used.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "User identifier",
+            "schema": { "type": "string", "example": "usr_abc123" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retrieved grocery list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "groceryList": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/GroceryListItem" }
+                    }
+                  },
+                  "required": ["success", "groceryList"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "user_id required",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Grocery List"],
+        "summary": "Manually add item to grocery list",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "usr_abc123" },
+                  "ingredient_name": { "type": "string", "example": "Almond Milk" },
+                  "quantity": { "type": "string", "example": "1 liter" }
+                },
+                "required": ["user_id", "ingredient_name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Grocery item added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "item": { "$ref": "#/components/schemas/GroceryListItem" }
+                  },
+                  "required": ["success", "item"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Grocery List"],
+        "summary": "Update grocery item status or quantity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grocery_id": { "type": "string", "format": "uuid", "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+                  "status": { "type": "string", "enum": ["Pending", "Purchased"], "example": "Purchased" },
+                  "quantity": { "type": "string", "example": "2" },
+                  "ingredient_name": { "type": "string", "example": "Organic Milk" }
+                },
+                "required": ["grocery_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "item": { "$ref": "#/components/schemas/GroceryListItem" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Grocery item not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Grocery List"],
+        "summary": "Delete a grocery item or clear all items",
+        "parameters": [
+          {
+            "name": "grocery_id",
+            "in": "query",
+            "required": false,
+            "description": "ID of single item to delete",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "description": "User ID required when clear=true",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "clear",
+            "in": "query",
+            "required": false,
+            "description": "Set to true to clear all items for a user",
+            "schema": { "type": "boolean", "example": true }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item(s) deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing grocery_id or user_id",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/grocery/generate": {
+      "post": {
+        "tags": ["Grocery List"],
+        "summary": "Generate grocery list from meal plans",
+        "description": "Inspects planned recipes across the specified date range and automatically inserts any ingredients that are not currently present in the user's grocery list.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "usr_abc123" },
+                  "start_date": { "type": "string", "format": "date", "example": "2026-11-14" },
+                  "end_date": { "type": "string", "format": "date", "example": "2026-11-21" }
+                },
+                "required": ["user_id", "start_date", "end_date"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated missing grocery items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Generated 5 grocery items successfully" },
+                    "items": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/GroceryListItem" }
+                    }
+                  },
+                  "required": ["success", "message", "items"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required fields",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin & Analytics"],
+        "summary": "Get admin dashboard overview metrics",
+        "description": "Returns aggregate platform metrics: total users, recipes, plans, admins, top scheduled recipes, most used ingredients, and recently joined users.",
+        "responses": {
+          "200": {
+            "description": "Platform statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "stats": { "$ref": "#/components/schemas/AdminStats" }
+                  },
+                  "required": ["success", "stats"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/sync": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Synchronize user profile from Firebase/OAuth",
+        "description": "Ensures the user account exists in the PostgreSQL database with latest profile details.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": { "type": "string", "example": "firebase_uid_123" },
+                  "email": { "type": "string", "format": "email", "example": "user@example.com" },
+                  "full_name": { "type": "string", "example": "Aarav Patel" },
+                  "mobile_number": { "type": "string", "example": "+919876543210" },
+                  "dietary_preference": { "type": "string", "example": "Vegetarian" },
+                  "avatar_url": { "type": "string", "format": "uri", "example": "https://example.com/avatar.jpg" }
+                },
+                "required": ["user_id", "email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User synchronized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "fullName": { "type": "string" },
+                        "email": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing user_id or email",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/google-native": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Verify Google Native ID Token and create NextAuth session",
+        "description": "Verifies Google tokeninfo, creates/updates user in PostgreSQL, and generates an encrypted NextAuth JWT cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": { "type": "string", "description": "Google OAuth2 ID token from mobile or web SDK" }
+                },
+                "required": ["idToken"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Google token verified and session established",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "name": { "type": "string" },
+                        "email": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or missing ID Token",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error during token verification",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RecipeItem": {
+        "type": "object",
+        "properties": {
+          "recipe_id": { "type": "string", "format": "uuid", "example": "415064e4-7d43-41bb-927e-cf9d92e85ab8" },
+          "recipe_name": { "type": "string", "example": "Paneer Butter Masala" },
+          "category": { "type": "string", "example": "Lunch" },
+          "cooking_time": { "type": "integer", "example": 45 },
+          "difficulty_level": { "type": "string", "example": "Medium" },
+          "instructions": { "type": "string", "example": "Heat butter in a pan..." },
+          "image_url": { "type": "string", "nullable": true, "example": "https://images.unsplash.com/photo-1631452180519-c014fe946bc7" },
+          "calories": { "type": "number", "example": 320 },
+          "protein": { "type": "number", "example": 12.5 },
+          "carbs": { "type": "number", "example": 8 },
+          "fat": { "type": "number", "example": 26 },
+          "fiber": { "type": "number", "example": 2.1 },
+          "vitamins": { "type": "string", "nullable": true, "example": "Vitamin A, Calcium" },
+          "video_url": { "type": "string", "example": "https://www.youtube.com/embed/S2G4d5W9gUY" },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "example": "Paneer" },
+                "category": { "type": "string", "example": "Pantry" },
+                "quantity": { "type": "string", "example": "200 g" }
+              }
+            }
+          }
+        },
+        "required": ["recipe_id", "recipe_name", "category", "cooking_time", "difficulty_level", "ingredients"]
+      },
+      "RecipeDetail": {
+        "type": "object",
+        "properties": {
+          "recipe_id": { "type": "string", "format": "uuid" },
+          "recipe_name": { "type": "string" },
+          "category": { "type": "string" },
+          "cooking_time": { "type": "integer" },
+          "difficulty_level": { "type": "string" },
+          "instructions": { "type": "string" },
+          "image_url": { "type": "string", "nullable": true },
+          "calories": { "type": "number" },
+          "protein": { "type": "number" },
+          "carbs": { "type": "number" },
+          "fat": { "type": "number" },
+          "fiber": { "type": "number" },
+          "vitamins": { "type": "string", "nullable": true },
+          "video_url": { "type": "string" },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "category": { "type": "string" },
+                "quantity": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "CreateRecipeInput": {
+        "type": "object",
+        "properties": {
+          "recipe_name": { "type": "string", "example": "Creamy Mushroom Risotto" },
+          "category": { "type": "string", "example": "Dinner" },
+          "cooking_time": { "type": "string", "example": "35" },
+          "difficulty_level": { "type": "string", "example": "Medium" },
+          "instructions": { "type": "string", "example": "1. Sauté mushrooms in olive oil.\n2. Add arborio rice and simmer with vegetable broth." },
+          "image_url": { "type": "string", "example": "https://images.unsplash.com/photo-1541544741938-0af808871cc0" },
+          "calories": { "type": "string", "example": "380" },
+          "protein": { "type": "string", "example": "9" },
+          "carbs": { "type": "string", "example": "58" },
+          "fat": { "type": "string", "example": "12" },
+          "fiber": { "type": "string", "example": "3" },
+          "vitamins": { "type": "string", "example": "Vitamin D, B Complex" },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "example": "Arborio Rice" },
+                "quantity": { "type": "string", "example": "1 cup" }
+              },
+              "required": ["name"]
+            }
+          }
+        },
+        "required": ["recipe_name", "instructions"]
+      },
+      "CommentItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "8fa85f64-5717-4562-b3fc-2c963f66afa6" },
+          "user": { "type": "string", "example": "Neha Sharma" },
+          "text": { "type": "string", "example": "Replaced butter with ghee, tasted divine!" },
+          "time": { "type": "string", "example": "2h ago" }
+        },
+        "required": ["id", "user", "text", "time"]
+      },
+      "RecommendedRecipe": {
+        "type": "object",
+        "properties": {
+          "recipe_id": { "type": "string", "format": "uuid" },
+          "recipe_name": { "type": "string" },
+          "category": { "type": "string" },
+          "cooking_time": { "type": "integer" },
+          "difficulty_level": { "type": "string" },
+          "image_url": { "type": "string", "nullable": true },
+          "calories": { "type": "integer" },
+          "instructions": { "type": "string" },
+          "total_ingredients_needed": { "type": "integer", "example": 7 },
+          "matched_ingredients_count": { "type": "integer", "example": 5 },
+          "match_percentage": { "type": "integer", "example": 71 },
+          "ingredients_details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "example": "Paneer" },
+                "quantity": { "type": "string", "example": "200 g" },
+                "matched": { "type": "boolean", "example": true }
+              }
+            }
+          }
+        }
+      },
+      "MealPlanItem": {
+        "type": "object",
+        "properties": {
+          "meal_plan_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string" },
+          "recipe_id": { "type": "string", "format": "uuid" },
+          "meal_type": { "type": "string", "example": "Dinner" },
+          "meal_date": { "type": "string", "format": "date", "example": "2026-11-16" },
+          "recipe_name": { "type": "string", "example": "Paneer Butter Masala" },
+          "category": { "type": "string", "example": "Lunch" },
+          "cooking_time": { "type": "integer", "example": 45 },
+          "image_url": { "type": "string", "nullable": true },
+          "calories": { "type": "integer", "example": 320 }
+        }
+      },
+      "GroceryListItem": {
+        "type": "object",
+        "properties": {
+          "grocery_id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string" },
+          "ingredient_name": { "type": "string", "example": "Tomato" },
+          "quantity": { "type": "string", "example": "3 unit" },
+          "status": { "type": "string", "enum": ["Pending", "Purchased"], "example": "Pending" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "used_in": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Paneer Butter Masala", "Tomato Soup"]
+          },
+          "recipe_quantities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "recipe": { "type": "string" },
+                "quantity": { "type": "string" }
+              }
+            }
+          },
+          "total_quantity": { "type": "string", "example": "3 unit (Paneer Butter Masala) + 4 unit (Tomato Soup)" }
+        }
+      },
+      "AdminStats": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "object",
+            "properties": {
+              "totalUsers": { "type": "integer", "example": 142 },
+              "totalRecipes": { "type": "integer", "example": 48 },
+              "totalMealPlans": { "type": "integer", "example": 210 },
+              "totalAdmins": { "type": "integer", "example": 2 },
+              "totalGroceryItems": { "type": "integer", "example": 315 }
+            }
+          },
+          "popularRecipes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "recipe_id": { "type": "string", "format": "uuid" },
+                "recipe_name": { "type": "string" },
+                "plan_count": { "type": "integer" }
+              }
+            }
+          },
+          "popularIngredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ingredient_name": { "type": "string" },
+                "recipe_count": { "type": "integer" }
+              }
+            }
+          },
+          "recentUsers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "user_id": { "type": "string" },
+                "full_name": { "type": "string" },
+                "email": { "type": "string" },
+                "created_at": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "Invalid or missing parameter" }
+        },
+        "required": ["success", "error"]
+      }
+    }
+  }
+}
+

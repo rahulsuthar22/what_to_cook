@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
+import { GroceryItemStatus } from '@/generated/prisma/enums';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,9 +26,10 @@ export async function POST(request: NextRequest) {
       include: {
         recipe: {
           include: {
-            recipeIngredients: {
+            ingredients: {
               include: {
                 ingredient: true,
+                unit: true,
               },
             },
           },
@@ -36,31 +38,41 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Aggregate all required ingredients (avoiding duplicates)
-    const neededIngredientsMap = new Map<string, { originalName: string; quantity: string }>();
+    const neededIngredientsMap = new Map<string, { ingredientId: string; originalName: string; quantity: number | null; unitId: string | null }>();
     for (const plan of mealPlans) {
-      for (const ri of plan.recipe.recipeIngredients) {
-        const name = ri.ingredient.ingredientName;
-        neededIngredientsMap.set(name.toLowerCase(), {
-          originalName: name,
-          quantity: ri.quantity || 'as needed',
-        });
+      if (!plan.recipe) continue;
+      for (const ri of plan.recipe.ingredients) {
+        const name = ri.ingredient.name;
+        const nameLower = name.trim().toLowerCase();
+        if (!neededIngredientsMap.has(nameLower)) {
+          neededIngredientsMap.set(nameLower, {
+            ingredientId: ri.ingredient.id,
+            originalName: name,
+            quantity: ri.quantity ? Number(ri.quantity) : null,
+            unitId: ri.unitId,
+          });
+        }
       }
     }
 
     // 3. Find current items in the user's grocery list
-    const existingGrocery = await prisma.groceryList.findMany({
+    const existingGrocery = await prisma.groceryListItem.findMany({
       where: { userId: user_id },
-      select: { ingredientName: true },
+      include: { ingredient: true },
     });
-    const existingNamesSet = new Set(existingGrocery.map(g => g.ingredientName.trim().toLowerCase()));
+    const existingNamesSet = new Set(
+      existingGrocery.map(g => (g.ingredient?.name || g.customName || '').trim().toLowerCase())
+    );
 
     // 4. Filter out items already on the list
-    const missingIngredients: { name: string; quantity: string }[] = [];
+    const missingIngredients: { ingredientId: string; name: string; quantity: number | null; unitId: string | null }[] = [];
     neededIngredientsMap.forEach((details, nameLower) => {
       if (!existingNamesSet.has(nameLower)) {
         missingIngredients.push({
+          ingredientId: details.ingredientId,
           name: details.originalName,
           quantity: details.quantity,
+          unitId: details.unitId,
         });
       }
     });
@@ -76,23 +88,24 @@ export async function POST(request: NextRequest) {
     // 5. Batch create the missing items in a transaction
     const insertedItems = await prisma.$transaction(
       missingIngredients.map(item => 
-        prisma.groceryList.create({
+        prisma.groceryListItem.create({
           data: {
             userId: user_id,
-            ingredientName: item.name,
+            ingredientId: item.ingredientId,
             quantity: item.quantity,
-            status: 'Pending',
+            unitId: item.unitId,
+            status: GroceryItemStatus.PENDING,
           },
         })
       )
     );
 
-    const formattedInserted = insertedItems.map(item => ({
+    const formattedInserted = insertedItems.map((item, idx) => ({
       grocery_id: item.id,
       user_id: item.userId,
-      ingredient_name: item.ingredientName,
-      quantity: item.quantity,
-      status: item.status,
+      ingredient_name: missingIngredients[idx].name,
+      quantity: item.quantity ? `${item.quantity}` : '1',
+      status: 'Pending',
     }));
 
     return NextResponse.json({ 

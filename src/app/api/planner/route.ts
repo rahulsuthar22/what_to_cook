@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
+import { MealType } from '@/generated/prisma/enums';
+
+// Helper to normalize meal type
+function toMealTypeEnum(type: string): MealType {
+  const upper = (type || '').toUpperCase();
+  if (upper === 'BREAKFAST') return MealType.BREAKFAST;
+  if (upper === 'LUNCH') return MealType.LUNCH;
+  if (upper === 'DINNER') return MealType.DINNER;
+  return MealType.SNACK;
+}
 
 // GET /api/planner - Retrieve meal plans for a user
 export async function GET(request: NextRequest) {
@@ -24,23 +34,37 @@ export async function GET(request: NextRequest) {
     const mealPlans = await prisma.mealPlan.findMany({
       where,
       include: {
-        recipe: true,
+        recipe: {
+          include: {
+            categories: {
+              include: {
+                category: true,
+              },
+            },
+            nutrition: true,
+          },
+        },
       },
     });
 
     // Format output
-    const formattedPlans = mealPlans.map(mp => ({
-      meal_plan_id: mp.id,
-      user_id: mp.userId,
-      recipe_id: mp.recipeId,
-      meal_type: mp.mealType,
-      meal_date: mp.mealDate.toISOString().split('T')[0],
-      recipe_name: mp.recipe.recipeName,
-      category: mp.recipe.category,
-      cooking_time: mp.recipe.cookingTime,
-      image_url: mp.recipe.imageUrl,
-      calories: mp.recipe.calories,
-    }));
+    const formattedPlans = mealPlans.map(mp => {
+      const primaryCategory = mp.recipe?.categories[0]?.category.name || 'General';
+      const caloriesVal = mp.recipe?.nutrition?.caloriesKcal ? Number(mp.recipe.nutrition.caloriesKcal) : 0;
+
+      return {
+        meal_plan_id: mp.id,
+        user_id: mp.userId,
+        recipe_id: mp.recipeId,
+        meal_type: mp.mealType.charAt(0) + mp.mealType.slice(1).toLowerCase(),
+        meal_date: mp.mealDate.toISOString().split('T')[0],
+        recipe_name: mp.recipe?.name || 'Recipe',
+        category: primaryCategory,
+        cooking_time: mp.recipe?.cookTimeMinutes || 0,
+        image_url: mp.recipe?.imageUrl || null,
+        calories: caloriesVal,
+      };
+    });
 
     // Sort by Date, then by Meal Type: Breakfast, Lunch, Dinner, Snack
     const typeOrder: Record<string, number> = { Breakfast: 1, Lunch: 2, Dinner: 3, Snack: 4 };
@@ -74,8 +98,8 @@ export async function POST(request: NextRequest) {
     const newPlan = await prisma.mealPlan.create({
       data: {
         userId: user_id,
-        recipeId: parseInt(recipe_id, 10),
-        mealType: meal_type,
+        recipeId: String(recipe_id),
+        mealType: toMealTypeEnum(meal_type),
         mealDate: new Date(meal_date),
       },
     });
@@ -84,7 +108,7 @@ export async function POST(request: NextRequest) {
       meal_plan_id: newPlan.id,
       user_id: newPlan.userId,
       recipe_id: newPlan.recipeId,
-      meal_type: newPlan.mealType,
+      meal_type: newPlan.mealType.charAt(0) + newPlan.mealType.slice(1).toLowerCase(),
       meal_date: newPlan.mealDate.toISOString().split('T')[0],
     };
 
@@ -99,22 +123,17 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const mealPlanId = searchParams.get('meal_plan_id');
+    const planId = searchParams.get('meal_plan_id');
 
-    if (!mealPlanId) {
+    if (!planId) {
       return NextResponse.json({ success: false, error: 'meal_plan_id query param is required' }, { status: 400 });
     }
 
     const deleted = await prisma.mealPlan.delete({
-      where: { id: parseInt(mealPlanId, 10) },
+      where: { id: String(planId) },
     });
 
-    const formattedDeleted = {
-      meal_plan_id: deleted.id,
-      user_id: deleted.userId,
-    };
-
-    return NextResponse.json({ success: true, message: 'Meal plan entry deleted', deleted: formattedDeleted });
+    return NextResponse.json({ success: true, message: 'Meal plan removed', deletedId: deleted.id });
   } catch (error: any) {
     console.error('Error deleting meal plan:', error);
     if (error.code === 'P2025') {

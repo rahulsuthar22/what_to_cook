@@ -7,21 +7,21 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
-    if (isNaN(recipeId)) {
+    const recipeId = resolvedParams.id;
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
 
-    const likesCount = await prisma.recipeLike.count({
+    const likesCount = await prisma.recipeFavourite.count({
       where: { recipeId },
     });
 
     let liked = false;
     if (userId) {
-      const userLike = await prisma.recipeLike.findUnique({
+      const userLike = await prisma.recipeFavourite.findUnique({
         where: {
           userId_recipeId: {
             userId,
@@ -45,8 +45,8 @@ export async function POST(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
-    if (isNaN(recipeId)) {
+    const recipeId = resolvedParams.id;
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
@@ -57,8 +57,19 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'user_id is required' }, { status: 400 });
     }
 
+    // Ensure user exists in database to satisfy foreign key constraint
+    await prisma.user.upsert({
+      where: { id: user_id },
+      update: {},
+      create: {
+        id: user_id,
+        fullName: 'User',
+        email: `${user_id}@whattocook.app`,
+      },
+    });
+
     // Check if user already liked
-    const existingLike = await prisma.recipeLike.findUnique({
+    const existingLike = await prisma.recipeFavourite.findUnique({
       where: {
         userId_recipeId: {
           userId: user_id,
@@ -70,7 +81,7 @@ export async function POST(
     let liked = false;
     if (existingLike) {
       // Unlike
-      await prisma.recipeLike.delete({
+      await prisma.recipeFavourite.delete({
         where: {
           userId_recipeId: {
             userId: user_id,
@@ -81,7 +92,7 @@ export async function POST(
       liked = false;
     } else {
       // Like
-      await prisma.recipeLike.create({
+      await prisma.recipeFavourite.create({
         data: {
           userId: user_id,
           recipeId,
@@ -90,7 +101,7 @@ export async function POST(
       liked = true;
     }
 
-    const likesCount = await prisma.recipeLike.count({
+    const likesCount = await prisma.recipeFavourite.count({
       where: { recipeId },
     });
 

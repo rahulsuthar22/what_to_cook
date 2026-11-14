@@ -28,19 +28,20 @@ export async function POST(request: NextRequest) {
             email: admin.email,
             mobileNumber: '',
             dietaryPreference: 'None',
+            dietary_preference: 'None',
             avatarUrl: null,
           },
         });
       }
     }
 
+    // Upsert User core record (matching current segregated schema)
     const user = await prisma.user.upsert({
       where: { id: user_id },
       update: {
         fullName: full_name || 'User',
         email: email.toLowerCase().trim(),
         mobileNumber: mobile_number || undefined,
-        dietaryPreference: dietary_preference || undefined,
         avatarUrl: avatar_url || undefined,
       },
       create: {
@@ -48,12 +49,64 @@ export async function POST(request: NextRequest) {
         fullName: full_name || 'User',
         email: email.toLowerCase().trim(),
         mobileNumber: mobile_number || '',
-        dietaryPreference: dietary_preference || 'None',
         avatarUrl: avatar_url || null,
+      },
+      include: {
+        diets: {
+          include: {
+            diet: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json({ success: true, user });
+    // If dietary_preference is provided, sync with UserDiet relational table
+    let activeDiet = 'None';
+    if (dietary_preference && dietary_preference !== 'None') {
+      const diet = await prisma.diet.findFirst({
+        where: {
+          name: {
+            equals: dietary_preference,
+            mode: 'insensitive',
+          },
+        },
+      });
+
+      if (diet) {
+        await prisma.userDiet.upsert({
+          where: {
+            userId_dietId: {
+              userId: user.id,
+              dietId: diet.id,
+            },
+          },
+          update: {},
+          create: {
+            userId: user.id,
+            dietId: diet.id,
+          },
+        });
+        activeDiet = diet.name;
+      }
+    } else if (user.diets && user.diets.length > 0) {
+      activeDiet = user.diets[0].diet.name;
+    }
+
+    // Return backwards-compatible response for frontend components
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        mobileNumber: user.mobileNumber,
+        avatarUrl: user.avatarUrl,
+        dietaryPreference: activeDiet,
+        dietary_preference: activeDiet,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
   } catch (error: any) {
     console.error('Error in auth sync route:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

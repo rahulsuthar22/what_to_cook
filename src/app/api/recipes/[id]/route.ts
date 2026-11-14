@@ -22,18 +22,33 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
+    const recipeId = resolvedParams.id;
 
-    if (isNaN(recipeId)) {
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
     const recipe = await prisma.recipe.findUnique({
       where: { id: recipeId },
       include: {
-        recipeIngredients: {
+        ingredients: {
           include: {
             ingredient: true,
+            unit: true,
+          },
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+        steps: {
+          orderBy: {
+            stepNumber: 'asc',
+          },
+        },
+        nutrition: true,
+        categories: {
+          include: {
+            category: true,
           },
         },
       },
@@ -43,26 +58,40 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Recipe not found' }, { status: 404 });
     }
 
+    const primaryCategory = recipe.categories?.[0]?.category?.name || 'Uncategorized';
+    const cookTime = (recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0) || recipe.cookTimeMinutes || 0;
+    const difficultyStr = recipe.difficulty 
+      ? recipe.difficulty.charAt(0) + recipe.difficulty.slice(1).toLowerCase() 
+      : 'Easy';
+    const instructionsStr = recipe.steps && recipe.steps.length > 0
+      ? recipe.steps.map(s => s.instruction).join('\n')
+      : (recipe.description || '');
+
     const formattedRecipe = {
       recipe_id: recipe.id,
-      recipe_name: recipe.recipeName,
-      category: recipe.category,
-      cooking_time: recipe.cookingTime,
-      difficulty_level: recipe.difficultyLevel,
-      instructions: recipe.instructions,
+      recipe_name: recipe.name,
+      category: primaryCategory,
+      cooking_time: cookTime,
+      difficulty_level: difficultyStr,
+      instructions: instructionsStr,
       image_url: recipe.imageUrl,
-      calories: recipe.calories,
-      protein: recipe.protein,
-      carbs: recipe.carbs,
-      fat: recipe.fat,
-      fiber: recipe.fiber,
-      vitamins: recipe.vitamins,
-      video_url: getVideoUrl(recipe.recipeName),
-      ingredients: recipe.recipeIngredients.map(ri => ({
-        name: ri.ingredient.ingredientName,
-        category: ri.ingredient.category,
-        quantity: ri.quantity,
-      })),
+      calories: recipe.nutrition?.caloriesKcal ? Number(recipe.nutrition.caloriesKcal) : 0,
+      protein: recipe.nutrition?.proteinG ? Number(recipe.nutrition.proteinG) : 0,
+      carbs: recipe.nutrition?.carbohydratesG ? Number(recipe.nutrition.carbohydratesG) : 0,
+      fat: recipe.nutrition?.fatG ? Number(recipe.nutrition.fatG) : 0,
+      fiber: recipe.nutrition?.fibreG ? Number(recipe.nutrition.fibreG) : 0,
+      vitamins: (recipe.metadata as any)?.vitamins || null,
+      video_url: recipe.videoUrl || getVideoUrl(recipe.name),
+      ingredients: recipe.ingredients.map(ri => {
+        const qtyVal = ri.quantity ? Number(ri.quantity) : '';
+        const unitSymbol = ri.unit?.symbol || ri.unit?.name || '';
+        const formattedQty = `${qtyVal} ${unitSymbol}`.trim() || ri.preparationNote || 'as needed';
+        return {
+          name: ri.ingredient.name,
+          category: 'Pantry',
+          quantity: formattedQty,
+        };
+      }),
     };
 
     return NextResponse.json({ success: true, recipe: formattedRecipe });
@@ -79,9 +108,9 @@ export async function DELETE(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
+    const recipeId = resolvedParams.id;
 
-    if (isNaN(recipeId)) {
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
@@ -91,8 +120,7 @@ export async function DELETE(
 
     const formattedDeleted = {
       recipe_id: deleted.id,
-      recipe_name: deleted.recipeName,
-      category: deleted.category,
+      recipe_name: deleted.name,
     };
 
     return NextResponse.json({ 

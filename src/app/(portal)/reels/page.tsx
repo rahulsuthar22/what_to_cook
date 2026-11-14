@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 interface Recipe {
-  recipe_id: number;
+  recipe_id: string | number;
   recipe_name: string;
   category: string;
   cooking_time: number;
@@ -37,7 +37,7 @@ interface Recipe {
 }
 
 interface Comment {
-  id: number;
+  id: string | number;
   user: string;
   text: string;
   time: string;
@@ -58,20 +58,20 @@ export default function FoodReelsPage() {
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [showVolumeBadge, setShowVolumeBadge] = useState(false);
-  const [likedReels, setLikedReels] = useState<Record<number, boolean>>({});
-  const [likesCount, setLikesCount] = useState<Record<number, number>>({});
+  const [likedReels, setLikedReels] = useState<Record<string | number, boolean>>({});
+  const [likesCount, setLikesCount] = useState<Record<string | number, number>>({});
   const [showComments, setShowComments] = useState(false);
-  const [activeCommentsRecipeId, setActiveCommentsRecipeId] = useState<number | null>(null);
+  const [activeCommentsRecipeId, setActiveCommentsRecipeId] = useState<string | number | null>(null);
   const [newCommentText, setNewCommentText] = useState('');
   
   // YouTube API Player states
-  const [isPlaying, setIsPlaying] = useState<Record<number, boolean>>({});
-  const [currentTime, setCurrentTime] = useState<Record<number, number>>({});
-  const [duration, setDuration] = useState<Record<number, number>>({});
+  const [isPlaying, setIsPlaying] = useState<Record<string | number, boolean>>({});
+  const [currentTime, setCurrentTime] = useState<Record<string | number, number>>({});
+  const [duration, setDuration] = useState<Record<string | number, number>>({});
 
   // Overlay HUD visibility controls
   const [overlayVisible, setOverlayVisible] = useState(true);
-  const [hoveredReelId, setHoveredReelId] = useState<number | null>(null);
+  const [hoveredReelId, setHoveredReelId] = useState<string | number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -106,11 +106,11 @@ export default function FoodReelsPage() {
     };
   }, []);
 
-  const playersRef = useRef<Record<number, any>>({});
+  const playersRef = useRef<Record<string | number, any>>({});
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Comments database stored in memory
-  const [commentsDb, setCommentsDb] = useState<Record<number, Comment[]>>({
+  const [commentsDb, setCommentsDb] = useState<Record<string | number, Comment[]>>({
     1: [
       { id: 1, user: 'Aarav Patel', text: 'This looks so rich and creamy! Preparing it tonight.', time: '2h ago' },
       { id: 2, user: 'Neha Sharma', text: 'I replaced butter with ghee, tasted absolutely divine!', time: '4h ago' },
@@ -133,7 +133,7 @@ export default function FoodReelsPage() {
 
   // Planner popup state
   const [showPlannerModal, setShowPlannerModal] = useState(false);
-  const [plannerRecipeId, setPlannerRecipeId] = useState<number | null>(null);
+  const [plannerRecipeId, setPlannerRecipeId] = useState<string | number | null>(null);
   const [plannerDate, setPlannerDate] = useState('');
   const [plannerType, setPlannerType] = useState('Lunch');
   const [plannerSuccess, setPlannerSuccess] = useState(false);
@@ -343,7 +343,7 @@ export default function FoodReelsPage() {
   }, [activeReelIndex]);
 
   // Toggle Play/Pause
-  const handleTogglePlay = (recipeId: number) => {
+  const handleTogglePlay = (recipeId: string | number) => {
     resetOverlayTimer();
     const player = playersRef.current[recipeId];
     if (player && typeof player.getPlayerState === 'function') {
@@ -359,7 +359,7 @@ export default function FoodReelsPage() {
   };
 
   // Fast Forward 10 Seconds
-  const skipForward = (recipeId: number) => {
+  const skipForward = (recipeId: string | number) => {
     resetOverlayTimer();
     const player = playersRef.current[recipeId];
     if (player && typeof player.getCurrentTime === 'function' && typeof player.seekTo === 'function') {
@@ -370,7 +370,7 @@ export default function FoodReelsPage() {
   };
 
   // Rewind 10 Seconds
-  const skipBackward = (recipeId: number) => {
+  const skipBackward = (recipeId: string | number) => {
     resetOverlayTimer();
     const player = playersRef.current[recipeId];
     if (player && typeof player.getCurrentTime === 'function' && typeof player.seekTo === 'function') {
@@ -380,7 +380,7 @@ export default function FoodReelsPage() {
   };
 
   // Timeline scrubber slider handler
-  const handleScrub = (recipeId: number, value: number) => {
+  const handleScrub = (recipeId: string | number, value: number) => {
     resetOverlayTimer();
     const player = playersRef.current[recipeId];
     if (player && typeof player.seekTo === 'function') {
@@ -389,7 +389,7 @@ export default function FoodReelsPage() {
     }
   };
 
-  const handleToggleLike = async (recipeId: number) => {
+  const handleToggleLike = async (recipeId: string | number) => {
     if (!user?.uid) {
       alert('Please log in to like recipes!');
       return;
@@ -411,7 +411,7 @@ export default function FoodReelsPage() {
     }
   };
 
-  const handleOpenComments = (recipeId: number) => {
+  const handleOpenComments = (recipeId: string | number) => {
     setActiveCommentsRecipeId(recipeId);
     setShowComments(true);
   };
@@ -446,7 +446,7 @@ export default function FoodReelsPage() {
     }
   };
 
-  const handleShareReel = (recipeId: number) => {
+  const handleShareReel = (recipeId: string | number) => {
     const url = `${window.location.origin}/recipes/${recipeId}`;
     navigator.clipboard.writeText(url);
     setShowCopyAlert(true);
@@ -455,7 +455,7 @@ export default function FoodReelsPage() {
     }, 2000);
   };
 
-  const handleOpenPlanner = (recipeId: number) => {
+  const handleOpenPlanner = (recipeId: string | number) => {
     setPlannerRecipeId(recipeId);
     setShowPlannerModal(true);
     setPlannerSuccess(false);

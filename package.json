@@ -11,8 +11,8 @@
     "db:migration:create": "prisma migrate dev",
     "db:push": "prisma db push && prisma generate",
     "db:seed": "prisma db seed",
-    "db:setup": "prisma db push && prisma generate && prisma db seed",
-    "create-admin": "tsx --env-file=.env scripts/create-admin.ts"
+    "db:setup": "prisma migrate deploy && prisma db seed",
+    "create:admin": "tsx --env-file=.env scripts/create-admin.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

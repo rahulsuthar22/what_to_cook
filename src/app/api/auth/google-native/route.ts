@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     // 1. Verify the ID token using Google's tokeninfo API
     const googleVerifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`;
     const tokenInfoRes = await fetch(googleVerifyUrl);
-    
+
     if (!tokenInfoRes.ok) {
       return NextResponse.json({ success: false, error: 'Invalid Google ID Token' }, { status: 400 });
     }
@@ -48,7 +48,6 @@ export async function POST(request: NextRequest) {
           id: userId,
           fullName: name,
           email,
-          dietaryPreference: 'None',
         },
       });
     } else {

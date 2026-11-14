@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
+import { GroceryItemStatus } from '@/generated/prisma/enums';
 
 // GET /api/grocery - Retrieve grocery list for a user (with recipe associations)
 export async function GET(request: NextRequest) {
@@ -11,10 +12,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'user_id query param is required' }, { status: 400 });
     }
 
-    const groceryList = await prisma.groceryList.findMany({
+    const groceryList = await prisma.groceryListItem.findMany({
       where: { userId },
+      include: {
+        ingredient: true,
+        unit: true,
+      },
       orderBy: [
-        { status: 'desc' },
+        { status: 'asc' },
         { createdAt: 'desc' },
       ],
     });
@@ -25,9 +30,10 @@ export async function GET(request: NextRequest) {
       include: {
         recipe: {
           include: {
-            recipeIngredients: {
+            ingredients: {
               include: {
                 ingredient: true,
+                unit: true,
               },
             },
           },
@@ -38,38 +44,40 @@ export async function GET(request: NextRequest) {
     // Build a map: ingredient name (lowercase) -> array of { recipe, quantity }
     const ingredientDetails = new Map<string, { recipe: string; quantity: string }[]>();
     for (const plan of userMealPlans) {
-      for (const ri of plan.recipe.recipeIngredients) {
-        const ingName = ri.ingredient.ingredientName.trim().toLowerCase();
+      if (!plan.recipe) continue;
+      for (const ri of plan.recipe.ingredients) {
+        const ingName = ri.ingredient.name.trim().toLowerCase();
         if (!ingredientDetails.has(ingName)) {
           ingredientDetails.set(ingName, []);
         }
-        // Avoid duplicate recipe entries for same ingredient
         const existing = ingredientDetails.get(ingName)!;
-        if (!existing.some(e => e.recipe === plan.recipe.recipeName)) {
+        if (!existing.some(e => e.recipe === plan.recipe.name)) {
+          const qtyStr = ri.quantity ? `${ri.quantity} ${ri.unit?.symbol || ''}`.trim() : 'as needed';
           existing.push({
-            recipe: plan.recipe.recipeName,
-            quantity: ri.quantity || 'as needed',
+            recipe: plan.recipe.name,
+            quantity: qtyStr,
           });
         }
       }
     }
 
     const formattedList = groceryList.map(g => {
-      const details = ingredientDetails.get(g.ingredientName.trim().toLowerCase()) || [];
+      const displayName = g.ingredient?.name || g.customName || 'Item';
+      const details = ingredientDetails.get(displayName.trim().toLowerCase()) || [];
       const recipeNames = details.map(d => d.recipe);
-      // Build a combined total quantity string: "1.5 tsp + 2 tbsp + 300g"
       const totalParts = details.map(d => `${d.quantity} (${d.recipe})`);
-      const totalQuantity = totalParts.length > 0 ? totalParts.join(' + ') : g.quantity;
+      const defaultQtyStr = g.quantity ? `${g.quantity} ${g.unit?.symbol || ''}`.trim() : '1';
+      const totalQuantity = totalParts.length > 0 ? totalParts.join(' + ') : defaultQtyStr;
 
       return {
         grocery_id: g.id,
         user_id: g.userId,
-        ingredient_name: g.ingredientName,
-        quantity: g.quantity,
-        status: g.status,
+        ingredient_name: displayName,
+        quantity: defaultQtyStr,
+        status: g.status === GroceryItemStatus.PURCHASED ? 'Purchased' : 'Pending',
         created_at: g.createdAt,
         used_in: recipeNames,
-        recipe_quantities: details, // [{recipe: "Pasta", quantity: "1.5 tsp"}, ...]
+        recipe_quantities: details,
         total_quantity: totalQuantity,
       };
     });
@@ -87,31 +95,48 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { user_id, ingredient_name, quantity } = body;
 
-    if (!user_id || !ingredient_name || !quantity) {
+    if (!user_id || !ingredient_name) {
       return NextResponse.json(
-        { success: false, error: 'Missing fields: user_id, ingredient_name, quantity' }, 
+        { success: false, error: 'Missing fields: user_id, ingredient_name' }, 
         { status: 400 }
       );
     }
 
-    const item = await prisma.groceryList.create({
+    // Try finding matching ingredient in catalog
+    const matchingIngredient = await prisma.ingredient.findFirst({
+      where: {
+        name: { equals: ingredient_name.trim(), mode: 'insensitive' }
+      }
+    });
+
+    const parsedQty = parseFloat(quantity) || 1;
+
+    const item = await prisma.groceryListItem.create({
       data: {
         userId: user_id,
-        ingredientName: ingredient_name,
-        quantity: quantity,
-        status: 'Pending',
+        ingredientId: matchingIngredient ? matchingIngredient.id : null,
+        customName: matchingIngredient ? null : ingredient_name.trim(),
+        quantity: parsedQty,
+        status: GroceryItemStatus.PENDING,
       },
+      include: {
+        ingredient: true,
+        unit: true,
+      }
     });
+
+    const displayName = item.ingredient?.name || item.customName || ingredient_name;
+    const qtyStr = item.quantity ? `${item.quantity}` : (quantity || '1');
 
     const formattedItem = {
       grocery_id: item.id,
       user_id: item.userId,
-      ingredient_name: item.ingredientName,
-      quantity: item.quantity,
-      status: item.status,
+      ingredient_name: displayName,
+      quantity: qtyStr,
+      status: 'Pending',
       used_in: [],
       recipe_quantities: [],
-      total_quantity: item.quantity,
+      total_quantity: qtyStr,
     };
 
     return NextResponse.json({ success: true, item: formattedItem }, { status: 201 });
@@ -133,30 +158,35 @@ export async function PUT(request: NextRequest) {
 
     const updateData: any = {};
     if (status) {
-      updateData.status = status;
+      updateData.status = status.toUpperCase() === 'PURCHASED' ? GroceryItemStatus.PURCHASED : GroceryItemStatus.PENDING;
     }
-    if (quantity) {
-      updateData.quantity = quantity;
+    if (quantity !== undefined) {
+      updateData.quantity = parseFloat(quantity) || null;
     }
     if (ingredient_name) {
-      updateData.ingredientName = ingredient_name;
+      updateData.customName = ingredient_name;
     }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ success: false, error: 'Nothing to update' }, { status: 400 });
     }
 
-    const updated = await prisma.groceryList.update({
-      where: { id: parseInt(grocery_id, 10) },
+    const updated = await prisma.groceryListItem.update({
+      where: { id: String(grocery_id) },
       data: updateData,
+      include: {
+        ingredient: true,
+        unit: true,
+      }
     });
 
+    const displayName = updated.ingredient?.name || updated.customName || 'Item';
     const formattedUpdated = {
       grocery_id: updated.id,
       user_id: updated.userId,
-      ingredient_name: updated.ingredientName,
-      quantity: updated.quantity,
-      status: updated.status,
+      ingredient_name: displayName,
+      quantity: updated.quantity ? `${updated.quantity}` : '',
+      status: updated.status === GroceryItemStatus.PURCHASED ? 'Purchased' : 'Pending',
     };
 
     return NextResponse.json({ success: true, item: formattedUpdated });
@@ -182,7 +212,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'user_id is required to clear list' }, { status: 400 });
       }
 
-      const deletedBatch = await prisma.groceryList.deleteMany({
+      const deletedBatch = await prisma.groceryListItem.deleteMany({
         where: { userId },
       });
 
@@ -197,14 +227,17 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'grocery_id or clear=true query param is required' }, { status: 400 });
     }
 
-    const deleted = await prisma.groceryList.delete({
-      where: { id: parseInt(groceryId, 10) },
+    const deleted = await prisma.groceryListItem.delete({
+      where: { id: String(groceryId) },
+      include: {
+        ingredient: true,
+      }
     });
 
     const formattedDeleted = {
       grocery_id: deleted.id,
       user_id: deleted.userId,
-      ingredient_name: deleted.ingredientName,
+      ingredient_name: deleted.ingredient?.name || deleted.customName || 'Item',
     };
 
     return NextResponse.json({ success: true, message: 'Grocery item deleted', deleted: formattedDeleted });

@@ -7,12 +7,12 @@ export async function GET(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
-    if (isNaN(recipeId)) {
+    const recipeId = resolvedParams.id;
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
-    const comments = await prisma.recipeComment.findMany({
+    const reviews = await prisma.recipeReview.findMany({
       where: { recipeId },
       include: {
         user: {
@@ -28,8 +28,7 @@ export async function GET(
     });
 
     // Format comments to match frontend model
-    const formattedComments = comments.map(c => {
-      // Calculate relative time or format date
+    const formattedComments = reviews.map(c => {
       const diffMs = Date.now() - new Date(c.createdAt).getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffHours / 24);
@@ -46,7 +45,7 @@ export async function GET(
       return {
         id: c.id,
         user: c.user.fullName,
-        text: c.comment,
+        text: c.comment || '',
         time: relativeTime,
       };
     });
@@ -64,8 +63,8 @@ export async function POST(
 ) {
   try {
     const resolvedParams = await params;
-    const recipeId = parseInt(resolvedParams.id, 10);
-    if (isNaN(recipeId)) {
+    const recipeId = resolvedParams.id;
+    if (!recipeId) {
       return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
     }
 
@@ -76,10 +75,23 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'user_id and comment fields are required' }, { status: 400 });
     }
 
-    const newComment = await prisma.recipeComment.create({
+    // Ensure user exists in database to satisfy foreign key constraint
+    await prisma.user.upsert({
+      where: { id: user_id },
+      update: {},
+      create: {
+        id: user_id,
+        fullName: 'User',
+        email: `${user_id}@whattocook.app`,
+      },
+    });
+
+    // Create a new recipe review / comment
+    const newReview = await prisma.recipeReview.create({
       data: {
         userId: user_id,
         recipeId,
+        rating: 5,
         comment: comment.trim(),
       },
       include: {
@@ -92,9 +104,9 @@ export async function POST(
     });
 
     const formattedComment = {
-      id: newComment.id,
-      user: newComment.user.fullName,
-      text: newComment.comment,
+      id: newReview.id,
+      user: newReview.user.fullName,
+      text: newReview.comment || '',
       time: 'Just now',
     };
 
