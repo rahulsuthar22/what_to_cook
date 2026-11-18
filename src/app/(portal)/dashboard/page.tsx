@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useSession } from 'next-auth/react';
-import { 
-  ChefHat, 
-  Calendar, 
-  ShoppingBag, 
-  UtensilsCrossed, 
-  TrendingUp, 
+import { useCurrentUserRole } from '@/hooks/useAdminAuth';
+import {
+  ChefHat,
+  Calendar,
+  ShoppingBag,
+  UtensilsCrossed,
+  TrendingUp,
   Plus,
   Clock,
   ShieldAlert
@@ -27,14 +27,11 @@ interface MealPlan {
 
 export default function DashboardPage() {
   const { user, updatePreference } = useAuth();
-  const { data: session } = useSession();
+  const { hasAdminAccess: isAdmin, roleDisplayName: roleName } = useCurrentUserRole();
   const [todayMeals, setTodayMeals] = useState<MealPlan[]>([]);
   const [loadingMeals, setLoadingMeals] = useState(true);
   const [selectedPreference, setSelectedPreference] = useState(user?.dietary_preference || 'None');
   const [updateSuccess, setUpdateSuccess] = useState(false);
-
-  const isAdmin = (session?.user as any)?.role === 'Admin' || (session?.user as any)?.role === 'SuperAdmin';
-  const roleName = (session?.user as any)?.role || 'User';
 
   useEffect(() => {
     if (user) {
@@ -185,7 +182,7 @@ export default function DashboardPage() {
 
       {/* Bottom Section */}
       <div className="dashboard-bottom-grid" style={{ alignItems: 'start' }}>
-        
+
         {/* Today's Meals */}
         <div className="card" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>

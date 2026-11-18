@@ -2,22 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { useSession } from 'next-auth/react';
+import { useCurrentUserRole } from '@/hooks/useAdminAuth';
 import { User, Phone, Mail, Award, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
-  const { data: session } = useSession();
-  
+  const { hasAdminAccess: isAdmin, roleDisplayName: roleName } = useCurrentUserRole();
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [preference, setPreference] = useState('None');
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const isAdmin = (session?.user as any)?.role === 'Admin' || (session?.user as any)?.role === 'SuperAdmin';
-  const roleName = (session?.user as any)?.role || 'User';
 
   // Load initial context values
   useEffect(() => {
@@ -61,7 +58,7 @@ export default function ProfilePage() {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      
+
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Account Profile</h1>
@@ -90,21 +87,21 @@ export default function ProfilePage() {
 
       {/* Main Profile Grid */}
       <div className="profile-layout-grid" style={{ alignItems: 'start' }}>
-        
+
         {/* Left Side: Avatar & Stats Card */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '1.5rem', padding: '2.5rem 1.5rem' }}>
           {user.avatarUrl ? (
-            <img 
-              src={user.avatarUrl} 
-              alt={user.displayName} 
-              style={{ 
-                width: '90px', 
-                height: '90px', 
-                borderRadius: '50%', 
-                objectFit: 'cover', 
+            <img
+              src={user.avatarUrl}
+              alt={user.displayName}
+              style={{
+                width: '90px',
+                height: '90px',
+                borderRadius: '50%',
+                objectFit: 'cover',
                 boxShadow: '0 8px 20px rgba(255, 90, 54, 0.25)',
                 border: '3px solid rgba(255,255,255,0.1)'
-              }} 
+              }}
               referrerPolicy="no-referrer"
             />
           ) : (
@@ -141,7 +138,7 @@ export default function ProfilePage() {
           </h3>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
+
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <User size={14} style={{ color: 'var(--primary)' }} />

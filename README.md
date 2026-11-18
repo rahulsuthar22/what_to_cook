@@ -63,7 +63,7 @@ what_to_cook/
 │   ├── app_icon.png                 # Mobile icon and Apple touch web clip
 │   └── openapi.json                 # Static OpenAPI 3.1.0 JSON specification
 ├── scripts/
-│   └── create-admin.ts              # Interactive CLI script for admin provisioning
+│   └── create-superadmin.ts         # Interactive CLI script for SuperAdmin provisioning
 ├── src/
 │   ├── app/
 │   │   ├── (portal)/                # Authenticated Application Portal
@@ -269,8 +269,8 @@ npx prisma db push
 # 2. Seed initial ingredients, units, taxonomies, and recipes
 npx prisma db seed
 
-# 3. (Optional) Create an administrator account via CLI
-npm run create:admin -- --email admin@whattocook.com --password adminpassword123 --role SuperAdmin
+# 3. (Optional) Create the system SuperAdmin account via CLI (singleton)
+npm run create:superadmin -- --email superadmin@whattocook.com --password supersecret123
 ```
 
 ### 4. Install Dependencies & Launch Application

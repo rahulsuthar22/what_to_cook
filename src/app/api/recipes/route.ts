@@ -25,11 +25,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const difficulty = searchParams.get('difficulty');
+    const search = searchParams.get('search');
+    const sort = searchParams.get('sort') || 'newest';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     const where: any = {};
-    if (category) {
+    if (category && category !== 'ALL') {
       where.categories = {
         some: {
           category: {
@@ -41,43 +43,67 @@ export async function GET(request: NextRequest) {
         },
       };
     }
-    if (difficulty) {
+    if (difficulty && difficulty !== 'ALL') {
       const diffUpper = difficulty.toUpperCase();
       if (diffUpper in RecipeDifficulty) {
         where.difficulty = diffUpper as RecipeDifficulty;
       }
     }
+    if (search && search.trim()) {
+      where.name = {
+        contains: search.trim(),
+        mode: 'insensitive',
+      };
+    }
 
-    const recipes = await prisma.recipe.findMany({
-      where,
-      take: limit,
-      skip: offset,
-      orderBy: {
-        name: 'asc',
-      },
-      include: {
-        ingredients: {
-          include: {
-            ingredient: true,
-            unit: true,
+    let orderBy: any = { createdAt: 'desc' };
+    if (sort === 'name_asc') {
+      orderBy = { name: 'asc' };
+    } else if (sort === 'name_desc') {
+      orderBy = { name: 'desc' };
+    } else if (sort === 'oldest') {
+      orderBy = { createdAt: 'asc' };
+    } else if (sort === 'time_asc') {
+      orderBy = { cookTimeMinutes: 'asc' };
+    } else if (sort === 'time_desc') {
+      orderBy = { cookTimeMinutes: 'desc' };
+    }
+
+    const [total, recipes, categoryRecords] = await Promise.all([
+      prisma.recipe.count({ where }),
+      prisma.recipe.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy,
+        include: {
+          ingredients: {
+            include: {
+              ingredient: true,
+              unit: true,
+            },
+            orderBy: {
+              sortOrder: 'asc',
+            },
           },
-          orderBy: {
-            sortOrder: 'asc',
+          steps: {
+            orderBy: {
+              stepNumber: 'asc',
+            },
+          },
+          nutrition: true,
+          categories: {
+            include: {
+              category: true,
+            },
           },
         },
-        steps: {
-          orderBy: {
-            stepNumber: 'asc',
-          },
-        },
-        nutrition: true,
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-      },
-    });
+      }),
+      prisma.category.findMany({
+        select: { name: true },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
 
     // Transform relation output to match original expected format in frontend components
     const formattedRecipes = recipes.map(r => {
@@ -105,6 +131,7 @@ export async function GET(request: NextRequest) {
         fiber: r.nutrition?.fibreG ? Number(r.nutrition.fibreG) : 0,
         vitamins: (r.metadata as any)?.vitamins || null,
         video_url: r.videoUrl || getVideoUrl(r.name),
+        created_at: r.createdAt.toISOString(),
         ingredients: r.ingredients.map(ri => {
           const qtyVal = ri.quantity ? Number(ri.quantity) : '';
           const unitSymbol = ri.unit?.symbol || ri.unit?.name || '';
@@ -118,7 +145,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, recipes: formattedRecipes });
+    return NextResponse.json({
+      success: true,
+      recipes: formattedRecipes,
+      total,
+      limit,
+      offset,
+      categories: categoryRecords.map(c => c.name),
+    });
   } catch (error: any) {
     console.error('Error fetching recipes:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

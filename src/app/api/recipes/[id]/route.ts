@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
+import { RecipeDifficulty } from '@/generated/prisma/enums';
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 export function getVideoUrl(recipeName: string): string {
   const name = recipeName.toLowerCase();
@@ -97,6 +108,191 @@ export async function GET(
     return NextResponse.json({ success: true, recipe: formattedRecipe });
   } catch (error: any) {
     console.error('Error fetching recipe by ID:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+// PUT /api/recipes/[id] - Update an existing recipe (Admin Panel)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const resolvedParams = await params;
+    const recipeId = resolvedParams.id;
+
+    if (!recipeId) {
+      return NextResponse.json({ success: false, error: 'Invalid recipe ID' }, { status: 400 });
+    }
+
+    const existing = await prisma.recipe.findUnique({
+      where: { id: recipeId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Recipe not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const {
+      recipe_name,
+      category,
+      cooking_time,
+      difficulty_level,
+      instructions,
+      image_url,
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+      ingredients,
+    } = body;
+
+    if (!recipe_name || !instructions) {
+      return NextResponse.json(
+        { success: false, error: 'Recipe name and instructions are required.' },
+        { status: 400 }
+      );
+    }
+
+    let diffEnum: RecipeDifficulty = RecipeDifficulty.EASY;
+    if (difficulty_level) {
+      const upper = difficulty_level.toUpperCase();
+      if (upper in RecipeDifficulty) {
+        diffEnum = upper as RecipeDifficulty;
+      }
+    }
+
+    const cookTime = parseInt(cooking_time || '0', 10);
+    const caloriesVal = parseInt(calories || '0', 10);
+    const proteinVal = parseFloat(protein || '0');
+    const carbsVal = parseFloat(carbs || '0');
+    const fatVal = parseFloat(fat || '0');
+    const fiberVal = parseFloat(fiber || '0');
+
+    // Atomic transaction for clean relation updates
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Update base recipe
+      const recipe = await tx.recipe.update({
+        where: { id: recipeId },
+        data: {
+          name: recipe_name,
+          description: typeof instructions === 'string' ? instructions.slice(0, 250) : null,
+          imageUrl: image_url || null,
+          cookTimeMinutes: cookTime,
+          difficulty: diffEnum,
+        },
+      });
+
+      // 2. Update category if provided
+      if (category && category.trim()) {
+        const catName = category.trim();
+        const catSlug = slugify(catName) || 'general';
+        const catRecord = await tx.category.upsert({
+          where: { name: catName },
+          update: {},
+          create: {
+            name: catName,
+            slug: catSlug,
+          },
+        });
+
+        // Reconnect category
+        await tx.recipeCategory.deleteMany({ where: { recipeId } });
+        await tx.recipeCategory.create({
+          data: {
+            recipeId,
+            categoryId: catRecord.id,
+          },
+        });
+      }
+
+      // 3. Update instructions/steps
+      const stepLines = typeof instructions === 'string'
+        ? instructions.split('\n').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+        : [];
+
+      await tx.recipeStep.deleteMany({ where: { recipeId } });
+      if (stepLines.length > 0) {
+        for (let i = 0; i < stepLines.length; i++) {
+          await tx.recipeStep.create({
+            data: {
+              recipeId,
+              stepNumber: i + 1,
+              instruction: stepLines[i],
+            },
+          });
+        }
+      } else {
+        await tx.recipeStep.create({
+          data: {
+            recipeId,
+            stepNumber: 1,
+            instruction: String(instructions),
+          },
+        });
+      }
+
+      // 4. Update nutrition
+      await tx.recipeNutrition.deleteMany({ where: { recipeId } });
+      if (caloriesVal || proteinVal || carbsVal || fatVal || fiberVal) {
+        await tx.recipeNutrition.create({
+          data: {
+            recipeId,
+            caloriesKcal: caloriesVal,
+            proteinG: proteinVal,
+            carbohydratesG: carbsVal,
+            fatG: fatVal,
+            fibreG: fiberVal,
+          },
+        });
+      }
+
+      // 5. Update ingredients
+      if (ingredients && Array.isArray(ingredients)) {
+        await tx.recipeIngredient.deleteMany({ where: { recipeId } });
+
+        let sortOrder = 1;
+        for (const ing of ingredients) {
+          if (!ing.name || !ing.name.trim()) continue;
+
+          const ingName = ing.name.trim();
+          const ingSlug = slugify(ingName) || 'ingredient';
+
+          const ingredientRecord = await tx.ingredient.upsert({
+            where: { name: ingName },
+            update: {},
+            create: {
+              name: ingName,
+              slug: ingSlug,
+            },
+          });
+
+          await tx.recipeIngredient.create({
+            data: {
+              recipeId,
+              ingredientId: ingredientRecord.id,
+              sortOrder: sortOrder++,
+              preparationNote: ing.quantity || 'as needed',
+            },
+          });
+        }
+      }
+
+      return recipe;
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Recipe updated successfully',
+      recipe: {
+        recipe_id: updated.id,
+        recipe_name: updated.name,
+      },
+    });
+  } catch (error: any) {
+    console.error('Error updating recipe:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

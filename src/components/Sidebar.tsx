@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { useSession } from 'next-auth/react';
+import { useCurrentUserRole } from '@/hooks/useAdminAuth';
 import { 
   LayoutDashboard, 
   ChefHat, 
@@ -24,10 +24,8 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { data: session } = useSession();
+  const { hasAdminAccess: isAdmin } = useCurrentUserRole();
   const [isOpen, setIsOpen] = useState(false);
-
-  const isAdmin = (session?.user as any)?.role === 'Admin' || (session?.user as any)?.role === 'SuperAdmin';
 
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
