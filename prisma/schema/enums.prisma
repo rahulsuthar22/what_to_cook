@@ -49,3 +49,12 @@ enum GroceryItemStatus {
   REMOVED
 }
 
+enum IngredientRole {
+  MAIN
+  SECONDARY
+  FLAVORING
+  GARNISH
+  PANTRY_STAPLE
+  OPTIONAL
+}
+

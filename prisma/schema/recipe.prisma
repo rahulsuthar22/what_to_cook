@@ -65,6 +65,7 @@ model RecipeIngredient {
   preparationNote String?  @map("preparation_note") @db.VarChar(255)
   isOptional      Boolean  @default(false) @map("is_optional")
   sortOrder       Int      @default(0) @map("sort_order")
+  role            IngredientRole? @map("role")
 
   recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)

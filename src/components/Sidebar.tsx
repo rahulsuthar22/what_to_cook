@@ -18,7 +18,8 @@ import {
   Sparkles,
   Menu,
   X,
-  Film
+  Film,
+  Package
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -30,6 +31,7 @@ export default function Sidebar() {
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'What to Cook?', path: '/recommendations', icon: ChefHat },
+    { name: 'My Pantry', path: '/pantry', icon: Package },
     { name: 'Food Reels', path: '/reels', icon: Film },
     { name: 'Meal Planner', path: '/planner', icon: Calendar },
     { name: 'Grocery List', path: '/grocery', icon: ShoppingBag },

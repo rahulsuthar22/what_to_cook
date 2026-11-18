@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { AdminSpinner } from '@/components/admin/AdminLoader';
 import AdminRecipeSubnav from '@/components/admin/AdminRecipeSubnav';
+import RecipeIngredientEditor, { EditableRecipeIngredient } from '@/components/admin/RecipeIngredientEditor';
 import {
   ChefHat,
   Search,
@@ -72,7 +73,7 @@ export default function AdminRecipesPage() {
   const [editDifficulty, setEditDifficulty] = useState('Easy');
   const [editCalories, setEditCalories] = useState('');
   const [editInstructions, setEditInstructions] = useState('');
-  const [editIngredientsRaw, setEditIngredientsRaw] = useState('');
+  const [editIngredients, setEditIngredients] = useState<EditableRecipeIngredient[]>([]);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -90,7 +91,7 @@ export default function AdminRecipesPage() {
   const [difficulty, setDifficulty] = useState('Easy');
   const [calories, setCalories] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [ingredientsRaw, setIngredientsRaw] = useState('');
+  const [createIngredients, setCreateIngredients] = useState<EditableRecipeIngredient[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,11 +163,19 @@ export default function AdminRecipesPage() {
     setEditCalories(recipe.calories ? recipe.calories.toString() : '');
     setEditInstructions(recipe.instructions || '');
 
-    // Format ingredients into "Name: Quantity, Name: Quantity"
-    const ingText = (recipe.ingredients || [])
-      .map((i) => (i.quantity ? `${i.name}: ${i.quantity}` : i.name))
-      .join(', ');
-    setEditIngredientsRaw(ingText);
+    // Hydrate structured ingredients without data loss
+    const structuredIngredients: EditableRecipeIngredient[] = (recipe.ingredients || []).map((i: any) => ({
+      id: i.id,
+      ingredientId: i.ingredient_id || i.ingredientId,
+      name: i.name,
+      quantity: i.quantity_value !== undefined && i.quantity_value !== null ? i.quantity_value : (i.quantity ? String(i.quantity).replace(/[^\d.]/g, '') : ''),
+      unitId: i.unit_id || i.unitId || '',
+      unitSymbol: i.unit_symbol || '',
+      preparationNote: i.preparation_note || '',
+      isOptional: Boolean(i.is_optional),
+      role: i.role || 'MAIN',
+    }));
+    setEditIngredients(structuredIngredients);
     setEditError('');
 
     // If inspection modal was open, close it
@@ -183,20 +192,6 @@ export default function AdminRecipesPage() {
       return;
     }
 
-    const ingredientsParsed = editIngredientsRaw
-      .split(',')
-      .map((part) => {
-        const index = part.indexOf(':');
-        if (index === -1) {
-          const name = part.trim();
-          return name ? { name, quantity: 'as needed' } : null;
-        }
-        const name = part.substring(0, index).trim();
-        const quantity = part.substring(index + 1).trim();
-        return name ? { name, quantity } : null;
-      })
-      .filter((item): item is { name: string; quantity: string } => item !== null);
-
     setIsSavingEdit(true);
     setEditError('');
 
@@ -211,7 +206,7 @@ export default function AdminRecipesPage() {
           difficulty_level: editDifficulty,
           calories: editCalories,
           instructions: editInstructions,
-          ingredients: ingredientsParsed,
+          ingredients: editIngredients,
         }),
       });
 
@@ -268,20 +263,6 @@ export default function AdminRecipesPage() {
       return;
     }
 
-    const ingredientsParsed = ingredientsRaw
-      .split(',')
-      .map((part) => {
-        const index = part.indexOf(':');
-        if (index === -1) {
-          const name = part.trim();
-          return name ? { name, quantity: 'as needed' } : null;
-        }
-        const name = part.substring(0, index).trim();
-        const quantity = part.substring(index + 1).trim();
-        return name ? { name, quantity } : null;
-      })
-      .filter((item): item is { name: string; quantity: string } => item !== null);
-
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/recipes', {
@@ -294,7 +275,7 @@ export default function AdminRecipesPage() {
           difficulty_level: difficulty,
           calories,
           instructions,
-          ingredients: ingredientsParsed,
+          ingredients: createIngredients,
         }),
       });
 
@@ -305,7 +286,7 @@ export default function AdminRecipesPage() {
         setCookingTime('');
         setCalories('');
         setInstructions('');
-        setIngredientsRaw('');
+        setCreateIngredients([]);
         fetchRecipes();
       } else {
         setSubmitError(data.error || 'Failed to submit recipe.');
@@ -1256,25 +1237,12 @@ export default function AdminRecipesPage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                Ingredients (comma separated: &quot;Name: Quantity&quot;)
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#fff', marginBottom: '0.45rem' }}>
+                Recipe Ingredients (Structured Catalog)
               </label>
-              <textarea
-                placeholder="Paneer: 250g, Tomato: 3 pcs, Butter: 2 tbsp, Garam Masala: 1 tsp"
-                value={ingredientsRaw}
-                onChange={(e) => setIngredientsRaw(e.target.value)}
-                rows={2}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: '6px',
-                  backgroundColor: '#0a0b12',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
+              <RecipeIngredientEditor
+                ingredients={createIngredients}
+                onChange={setCreateIngredients}
               />
             </div>
 
@@ -1554,24 +1522,12 @@ export default function AdminRecipesPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-                  Ingredients (format: &quot;Name: Quantity, Name: Quantity&quot;)
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#fff', marginBottom: '0.45rem' }}>
+                  Recipe Ingredients (Structured Catalog)
                 </label>
-                <textarea
-                  value={editIngredientsRaw}
-                  onChange={(e) => setEditIngredientsRaw(e.target.value)}
-                  rows={2}
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 0.85rem',
-                    borderRadius: '6px',
-                    backgroundColor: '#0a0b12',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: '#fff',
-                    fontSize: '0.82rem',
-                    outline: 'none',
-                    resize: 'vertical',
-                  }}
+                <RecipeIngredientEditor
+                  ingredients={editIngredients}
+                  onChange={setEditIngredients}
                 />
               </div>
 

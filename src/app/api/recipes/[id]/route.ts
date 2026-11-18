@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
 import { RecipeDifficulty } from '@/generated/prisma/enums';
+import { syncRecipeIngredients, StructuredIngredientInput } from '@/lib/recipe-ingredient-helper';
 
 function slugify(text: string): string {
   return text
@@ -98,9 +99,20 @@ export async function GET(
         const unitSymbol = ri.unit?.symbol || ri.unit?.name || '';
         const formattedQty = `${qtyVal} ${unitSymbol}`.trim() || ri.preparationNote || 'as needed';
         return {
+          id: ri.id,
+          ingredient_id: ri.ingredientId,
+          ingredientId: ri.ingredientId,
           name: ri.ingredient.name,
-          category: 'Pantry',
           quantity: formattedQty,
+          quantity_value: ri.quantity ? Number(ri.quantity) : null,
+          unit_id: ri.unitId,
+          unitId: ri.unitId,
+          unit_symbol: ri.unit?.symbol || null,
+          preparation_note: ri.preparationNote,
+          is_optional: ri.isOptional,
+          role: ri.role,
+          sort_order: ri.sortOrder,
+          category: 'Pantry',
         };
       }),
     };
@@ -249,35 +261,9 @@ export async function PUT(
         });
       }
 
-      // 5. Update ingredients
+      // 5. Update ingredients using structured sync helper
       if (ingredients && Array.isArray(ingredients)) {
-        await tx.recipeIngredient.deleteMany({ where: { recipeId } });
-
-        let sortOrder = 1;
-        for (const ing of ingredients) {
-          if (!ing.name || !ing.name.trim()) continue;
-
-          const ingName = ing.name.trim();
-          const ingSlug = slugify(ingName) || 'ingredient';
-
-          const ingredientRecord = await tx.ingredient.upsert({
-            where: { name: ingName },
-            update: {},
-            create: {
-              name: ingName,
-              slug: ingSlug,
-            },
-          });
-
-          await tx.recipeIngredient.create({
-            data: {
-              recipeId,
-              ingredientId: ingredientRecord.id,
-              sortOrder: sortOrder++,
-              preparationNote: ing.quantity || 'as needed',
-            },
-          });
-        }
+        await syncRecipeIngredients(tx, recipeId, ingredients as StructuredIngredientInput[]);
       }
 
       return recipe;

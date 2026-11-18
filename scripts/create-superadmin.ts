@@ -108,10 +108,7 @@ export async function createSuperAdmin(emailInput: string, passwordInput: string
   // Check for any existing SuperAdmin in the database
   const existingSuperAdmin = await prisma.admin.findFirst({
     where: {
-      OR: [
-        { role: 'SUPERADMIN' },
-        { role: 'SuperAdmin' },
-      ],
+      role: 'SUPERADMIN',
     },
   });
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/config/db';
 import { getVideoUrl } from './[id]/route';
 import { RecipeDifficulty, RecipeStatus } from '@/generated/prisma/enums';
+import { syncRecipeIngredients, StructuredIngredientInput } from '@/lib/recipe-ingredient-helper';
 
 function slugify(text: string): string {
   return text
@@ -11,12 +12,6 @@ function slugify(text: string): string {
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
-}
-
-interface IngredientInput {
-  name: string;
-  category?: string;
-  quantity?: string;
 }
 
 // GET /api/recipes - Fetch recipes with optional query filters
@@ -105,16 +100,17 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Transform relation output to match original expected format in frontend components
-    const formattedRecipes = recipes.map(r => {
+    // Transform relation output to match expected format in frontend components
+    const formattedRecipes = recipes.map((r) => {
       const primaryCategory = r.categories?.[0]?.category?.name || 'Uncategorized';
       const cookTime = (r.prepTimeMinutes || 0) + (r.cookTimeMinutes || 0) || r.cookTimeMinutes || 0;
-      const difficultyStr = r.difficulty 
-        ? r.difficulty.charAt(0) + r.difficulty.slice(1).toLowerCase() 
+      const difficultyStr = r.difficulty
+        ? r.difficulty.charAt(0) + r.difficulty.slice(1).toLowerCase()
         : 'Easy';
-      const instructionsStr = r.steps && r.steps.length > 0
-        ? r.steps.map(s => s.instruction).join('\n')
-        : (r.description || '');
+      const instructionsStr =
+        r.steps && r.steps.length > 0
+          ? r.steps.map((s) => s.instruction).join('\n')
+          : r.description || '';
 
       return {
         recipe_id: r.id,
@@ -132,14 +128,25 @@ export async function GET(request: NextRequest) {
         vitamins: (r.metadata as any)?.vitamins || null,
         video_url: r.videoUrl || getVideoUrl(r.name),
         created_at: r.createdAt.toISOString(),
-        ingredients: r.ingredients.map(ri => {
+        ingredients: r.ingredients.map((ri) => {
           const qtyVal = ri.quantity ? Number(ri.quantity) : '';
           const unitSymbol = ri.unit?.symbol || ri.unit?.name || '';
           const formattedQty = `${qtyVal} ${unitSymbol}`.trim() || ri.preparationNote || 'as needed';
           return {
+            id: ri.id,
+            ingredient_id: ri.ingredientId,
+            ingredientId: ri.ingredientId,
             name: ri.ingredient.name,
-            category: 'Pantry',
             quantity: formattedQty,
+            quantity_value: ri.quantity ? Number(ri.quantity) : null,
+            unit_id: ri.unitId,
+            unitId: ri.unitId,
+            unit_symbol: ri.unit?.symbol || null,
+            preparation_note: ri.preparationNote,
+            is_optional: ri.isOptional,
+            role: ri.role,
+            sort_order: ri.sortOrder,
+            category: 'Pantry',
           };
         }),
       };
@@ -151,7 +158,7 @@ export async function GET(request: NextRequest) {
       total,
       limit,
       offset,
-      categories: categoryRecords.map(c => c.name),
+      categories: categoryRecords.map((c) => c.name),
     });
   } catch (error: any) {
     console.error('Error fetching recipes:', error);
@@ -163,25 +170,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      recipe_name, 
-      category, 
-      cooking_time, 
-      difficulty_level, 
-      instructions, 
-      image_url, 
-      calories, 
+    const {
+      recipe_name,
+      category,
+      cooking_time,
+      difficulty_level,
+      instructions,
+      image_url,
+      calories,
       protein,
       carbs,
       fat,
       fiber,
       vitamins,
-      ingredients 
+      ingredients,
     } = body;
 
     if (!recipe_name || !instructions) {
       return NextResponse.json(
-        { success: false, error: 'Recipe name and instructions are required' }, 
+        { success: false, error: 'Recipe name and instructions are required' },
         { status: 400 }
       );
     }
@@ -248,9 +255,13 @@ export async function POST(request: NextRequest) {
       }
 
       // 3. Create recipe steps from instructions
-      const stepLines = typeof instructions === 'string'
-        ? instructions.split('\n').map((s: string) => s.trim()).filter((s: string) => s.length > 0)
-        : [];
+      const stepLines =
+        typeof instructions === 'string'
+          ? instructions
+              .split('\n')
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 0)
+          : [];
 
       if (stepLines.length > 0) {
         for (let i = 0; i < stepLines.length; i++) {
@@ -286,31 +297,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // 5. Process ingredients if provided
+      // 5. Process structured ingredients
       if (ingredients && Array.isArray(ingredients)) {
-        let sortOrder = 1;
-        for (const ing of ingredients as IngredientInput[]) {
-          if (!ing.name) continue;
-
-          const ingSlug = slugify(ing.name);
-          const ingredient = await tx.ingredient.upsert({
-            where: { name: ing.name },
-            update: {},
-            create: {
-              name: ing.name,
-              slug: ingSlug,
-            },
-          });
-
-          await tx.recipeIngredient.create({
-            data: {
-              recipeId: newRecipe.id,
-              ingredientId: ingredient.id,
-              preparationNote: ing.quantity || 'as needed',
-              sortOrder: sortOrder++,
-            },
-          });
-        }
+        await syncRecipeIngredients(tx, newRecipe.id, ingredients as StructuredIngredientInput[]);
       }
 
       return newRecipe;
@@ -320,20 +309,25 @@ export async function POST(request: NextRequest) {
     const formattedRecipe = {
       recipe_id: resultRecipe.id,
       recipe_name: resultRecipe.name,
-      category: category || 'Uncategorized',
-      cooking_time: resultRecipe.cookTimeMinutes,
+      category: category || 'General',
+      cooking_time: cookTime,
       difficulty_level: difficulty_level || 'Easy',
-      instructions,
-      image_url: resultRecipe.imageUrl,
+      instructions: instructions,
+      image_url: image_url || null,
       calories: caloriesVal,
       protein: proteinVal,
       carbs: carbsVal,
       fat: fatVal,
       fiber: fiberVal,
       vitamins: vitamins || null,
+      created_at: resultRecipe.createdAt.toISOString(),
     };
 
-    return NextResponse.json({ success: true, recipe: formattedRecipe }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      message: 'Recipe created successfully',
+      recipe: formattedRecipe,
+    }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating recipe:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -15,7 +15,8 @@ import {
   Bookmark,
   CalendarPlus,
   BookOpen,
-  Search
+  Search,
+  Package
 } from 'lucide-react';
 
 interface IngredientDetail {
@@ -36,6 +37,9 @@ interface RecommendedRecipe {
   total_ingredients_needed: number;
   matched_ingredients_count: number;
   match_percentage: number;
+  classification?: 'COOK_NOW' | 'ALMOST_READY' | 'NEED_INGREDIENTS';
+  missing_ingredients?: Array<{ name: string; quantity: string }>;
+  available_ingredients?: Array<{ name: string; quantity: string }>;
   ingredients_details: IngredientDetail[];
 }
 
@@ -173,6 +177,34 @@ export default function RecommendationsPage() {
       }
     } catch (err) {
       console.error('Error fetching recommendations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoadPantry = async () => {
+    try {
+      const res = await fetch('/api/me/pantry');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.pantry) && data.pantry.length > 0) {
+        const names = data.pantry.map((i: any) => i.name);
+        setSelectedIngredients(names);
+        // Automatically fetch recommendations for loaded pantry
+        setLoading(true);
+        const recRes = await fetch('/api/recipes/recommend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ingredients: names }),
+        });
+        const recData = await recRes.json();
+        if (recData.success) {
+          setRecommendations(recData.recommendations);
+        }
+      } else {
+        alert('Your pantry is currently empty. Visit "My Pantry" to add your ingredients!');
+      }
+    } catch (err) {
+      console.error('Error loading pantry:', err);
     } finally {
       setLoading(false);
     }
@@ -429,10 +461,21 @@ export default function RecommendationsPage() {
 
       {/* Ingredient Inputs Card */}
       <div className="card card-glass" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sparkles size={18} style={{ color: 'var(--primary)' }} />
-          Select Your Ingredients
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+            <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+            Select Your Ingredients
+          </h3>
+          <button
+            onClick={handleLoadPantry}
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Package size={15} style={{ color: 'var(--primary)' }} />
+            <span>Load from My Pantry</span>
+          </button>
+        </div>
 
         {/* Custom Input */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -619,20 +662,28 @@ export default function RecommendationsPage() {
                     </span>
                   </div>
 
-                  {/* Match Percentage Pill */}
+                  {/* Match & Classification Pill */}
                   <div style={{ 
                     position: 'absolute',
                     top: '10px',
                     right: '10px',
-                    backgroundColor: recipe.match_percentage === 100 ? 'var(--success)' : 'var(--primary)',
-                    color: '#fff',
-                    borderRadius: '20px',
-                    padding: '0.25rem 0.6rem',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: '4px',
                   }}>
-                    {recipe.match_percentage}% Match
+                    <span style={{
+                      backgroundColor: recipe.classification === 'COOK_NOW' || recipe.match_percentage === 100 ? '#06d6a0' : recipe.classification === 'ALMOST_READY' ? 'var(--primary)' : '#ffd166',
+                      color: recipe.classification === 'NEED_INGREDIENTS' ? '#0b0c13' : '#fff',
+                      borderRadius: '20px',
+                      padding: '0.2rem 0.55rem',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.4)',
+                      letterSpacing: '0.02em',
+                    }}>
+                      {recipe.classification === 'COOK_NOW' ? '🔥 Cook Now' : recipe.classification === 'ALMOST_READY' ? '⚡ Almost Ready' : '🛒 Need Items'} • {recipe.match_percentage}%
+                    </span>
                   </div>
                 </div>
 
@@ -657,9 +708,14 @@ export default function RecommendationsPage() {
                     </span>
                   </div>
 
-                  {/* Ingredients summary */}
+                  {/* Ingredients summary & missing items */}
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     Matched: <strong style={{ color: 'var(--success)' }}>{recipe.matched_ingredients_count}</strong> of {recipe.total_ingredients_needed}
+                    {recipe.missing_ingredients && recipe.missing_ingredients.length > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Missing: <span style={{ color: '#ef476f' }}>{recipe.missing_ingredients.slice(0, 3).map((m: any) => m.name).join(', ')}{recipe.missing_ingredients.length > 3 ? '...' : ''}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

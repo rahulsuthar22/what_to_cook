@@ -2,21 +2,70 @@
 // INGREDIENT & MEASUREMENT UNITS
 // ============================================================
 
+model IngredientCategory {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique @db.VarChar(100)
+  slug        String  @unique @db.VarChar(120)
+  description String? @db.Text
+  sortOrder   Int     @default(0) @map("sort_order")
+  isActive    Boolean @default(true) @map("is_active")
+
+  ingredients Ingredient[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([isActive])
+  @@map("ingredient_categories")
+}
+
 model Ingredient {
   id   String @id @default(uuid()) @db.Uuid
   name String @unique @db.VarChar(150)
   slug String @unique @db.VarChar(180)
 
+  // Extended catalog fields
+  description String? @db.Text
+  imageUrl    String? @map("image_url") @db.Text
+  isActive    Boolean @default(true) @map("is_active")
+
+  // Category link (optional — ingredients can be uncategorized)
+  categoryId String? @map("category_id") @db.Uuid
+  category   IngredientCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
   recipes          RecipeIngredient[]
+  aliases          IngredientAlias[]
   allergens        IngredientAllergen[]
   dislikedByUsers  UserDislikedIngredient[]
   groceryListItems GroceryListItem[]
+  pantryItems      UserPantryItem[]
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@index([name])
+  @@index([isActive])
+  @@index([categoryId])
   @@map("ingredients")
+}
+
+/// Aliases for canonical ingredients (regional names, transliterations, common spellings)
+model IngredientAlias {
+  id           String @id @default(uuid()) @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  /// Alias stored in lowercase-normalized form for duplicate detection
+  alias           String @db.VarChar(150)
+  aliasNormalized String @map("alias_normalized") @db.VarChar(150)
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([aliasNormalized])
+  @@index([ingredientId])
+  @@index([aliasNormalized])
+  @@map("ingredient_aliases")
 }
 
 model Unit {
@@ -27,6 +76,7 @@ model Unit {
 
   recipeIngredients RecipeIngredient[]
   groceryListItems  GroceryListItem[]
+  pantryItems       UserPantryItem[]
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -46,3 +96,27 @@ model IngredientAllergen {
   @@map("ingredient_allergens")
 }
 
+/// Personal pantry — per-user ingredient selections (all fields except userId+ingredientId are optional for MVP)
+model UserPantryItem {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @map("user_id") @db.VarChar(128)
+  ingredientId String @map("ingredient_id") @db.Uuid
+
+  // All optional — user just needs to pick an ingredient
+  quantity   Decimal?  @db.Decimal(10, 3)
+  unitId     String?   @map("unit_id") @db.Uuid
+  expiryDate DateTime? @map("expiry_date") @db.Date
+  notes      String?   @db.VarChar(500)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  unit       Unit?      @relation(fields: [unitId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([userId, ingredientId])
+  @@index([userId])
+  @@index([ingredientId])
+  @@map("user_pantry_items")
+}
